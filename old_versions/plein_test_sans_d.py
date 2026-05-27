@@ -327,6 +327,7 @@ def model_feasible(path):
     model.setParam("Presolve", -1)
     model.optimize()
 
+    model.write("model_feasible.lp")
     #########################SCHEDULE#####################################
     # schedule = {}
     
@@ -391,15 +392,15 @@ import os
 import time
 
 # Dossier contenant tous les fichiers .dat
-folder = "../Data_with_maintenance_constraints/d=0"
-folder2 = "../Data_with_maintenance_constraints/d=5"
+folder = "data_with_maintenance_constraints/d=0"
+folder2 = "data_with_maintenance_constraints/d=5"
 
 # Liste de tous les chemins complets vers les fichiers .dat
 
 
 #paths = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".dat")]
 #paths += [os.path.join(folder2, f) for f in os.listdir(folder2) if f.endswith(".dat")]
-paths = ["../Data_with_maintenance_constraints/d=4/DataCplex_density=1_p=20_h=15_test_0.dat"]
+paths = ["data_with_maintenance_constraints/d=4/DataCplex_density=1_p=20_h=15_test_0.dat"]
 
 
 

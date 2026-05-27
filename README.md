@@ -1,93 +1,280 @@
-# ST7_1Avion
+# Aircraft-scheduling tuto installation
 
+Ce projet de Tail assignement résout un problème d'attribution des tâches pour chaque avion dans le cadre d'un projet en cours de recherche opérationnelle à CentraleSupélec. 
 
+## 1. Cloner le projet
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab-student.centralesupelec.fr/antoine.huang/st7_1avion.git
-git branch -M main
-git push -uf origin main
+```bash
+git clone https://github.com/yourusername/aircraft-scheduling.git
+cd aircraft-scheduling
 ```
 
-## Integrate with your tools
+---
 
-* [Set up project integrations](https://gitlab-student.centralesupelec.fr/antoine.huang/st7_1avion/-/settings/integrations)
+## 2. Créer un environnement virtuel
 
-## Collaborate with your team
+### Sur Linux/Mac:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### Sur Windows:
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
 
-## Test and Deploy
+---
 
-Use the built-in continuous integration in GitLab.
+## 3. Installer les modules
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+Nécéssite une license Gurobi, il y a un tuto pour une license académique à la fin.
 
-***
+```bash
+pip install -r requirements.txt
+```
 
-# Editing this README
+---
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## 4. Vérifier que ça marche
 
-## Suggestions for a good README
+```bash
+# Test simple
+python -c "import gurobipy; print('✓ OK')"
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+---
 
-## Name
-Choose a self-explaining name for your project.
+# 📂 Structure du Projet - Aircraft Scheduling
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## Arborescence
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```
+projet/
+├── main.py                           ← Script principal à exécuter
+├── README.md                         ← Ce fichier
+├── requirements.txt
+│
+├── src/                              ← Package d'optimisation
+│   ├── __init__.py
+│   ├── data_loader.py
+│   ├── preprocessing.py              ← Prétraitement des données
+│   └── model.py                      ← Implémentation et résolution du modèle
+│
+├── data                              ← Data sans les maintenances
+├── data_with_maintenance_constraints/
+│   └── d=4/
+│       └── *.dat                     ← Fichiers d'instances
+│
+└── results/                          ← Résultats des exécutions
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+---
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+## Description des fichiers
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+### `main.py`
+**Fichier principal à exécuter**
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+- Lance le solveur sur les instances
+- Affiche un résumé des résultats
+- Gère les fichiers d'entrée/sortie
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+**Utilisation:**
+```bash
+python main.py
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### `src/data_loader.py`
+**Chargement des données**
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Fonction principale:
+- `load_dat_file(filename)` → Charge un fichier .dat et retourne toutes les données
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+Responsabilités:
+- Parsing du fichier avec regex
+- Extraction des paramètres (nb_flights, horizon, etc.)
+- Extraction des vols, coûts, avions, aéroports
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### `src/preprocessing.py`
+**Prétraitement des données**
 
-## License
-For open source projects, say how it is licensed.
+Fonctions principales:
+- `preprocess_flights(flights, airports, aircraft_init, m_airports)` → Pré-traite les données
+- `find_compatible_flights(data, airport, target_fid, flight_type)` → Recherche binaire
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Optimisations via des dictionnaires adaptés
+
+### `src/model.py`
+**Construction et résolution du modèle**
+
+- `build_and_solve_model(...)` → Construit le modèle Gurobi
+- `_add_flow_constraints()` → Contraintes C2
+- `_add_base_constraints()` → Contraintes C3
+- `_add_duplicate_constraints()` → Contraintes C4
+- `_add_maintenance_constraints()` → Contraintes de maintenance
+
+### `src/__init__.py`
+**Package init**
+
+Exporte les fonctions principales du package pour utilisation externe.
+
+---
+
+## Utilisation
+
+### Exécution simple
+
+```bash
+python main.py
+```
+
+### Traiter plusieurs fichiers
+
+Modifier `main()` dans `main.py`:
+
+```python
+# Option 1: Tous les fichiers d'un dossier
+paths = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".dat")]
+
+# Option 2: Fichiers spécifiques
+paths = [
+    "data_with_maintenance_constraints/d=4/DataCplex_density=1_p=20_h=15_test_0.dat",
+    "data_with_maintenance_constraints/d=4/DataCplex_density=1_p=20_h=15_test_1.dat"
+]
+```
+
+---
+
+## Pipeline
+
+```
+main.py
+  │
+  ├─→ load_dat_file()
+  │   └─→ Charge fichier .dat
+  │       └─→ Returns: nb_flights, cap_maintenance, horizon, ...
+  │
+  ├─→ preprocess_flights()
+  │   └─→ Indexe et trie les données
+  │       └─→ Returns: data (dict optimisé)
+  │
+  └─→ build_and_solve_model()
+      ├─→ Crée variables Gurobi (x, y, z)
+      ├─→ Ajoute contraintes
+      │   ├─→ C1: Couverture
+      │   ├─→ C2: Flux (hors base)
+      │   ├─→ C3: Flux (base)
+      │   ├─→ C4: Doublons
+      │   └─→ Maintenance
+      ├─→ Définit objectif
+      └─→ Résout le modèle
+          └─→ Returns: (model, x, y, z)
+```
+
+
+## 🔧 Configuration Gurobi
+
+Dans `main.py`:
+
+```python
+model.setParam("OutputFlag", 1)      # Afficher les logs
+model.setParam("Presolve", 2)        # Présolve agressif
+model.setParam("MIPGap", 0.02)       # Gap tolérance 2%
+```
+
+À modifier selon les besoins:
+- MIPGap: Plus petit = plus de temps mais meilleure solution
+- Presolve: -1 (auto), 0 (off), 1 (conservatif), 2 (agressif)
+- Threads: Nombre de threads parallèles
+
+---
+
+## Format du fichier .dat
+
+Exemple:
+```
+Nbflight = 20;
+capmaintenance = 5;
+horizon = 15;
+
+Flight = {
+  <1, CDG, ORY, 100, 150, 1>,
+  <2, ORY, CDG, 200, 250, 1>,
+  ...
+};
+
+Cost = [
+  [10, 12, 15, ...],
+  [11, 13, 16, ...],
+  ...
+];
+
+Aircraft = [<1, CDG>, <2, CDG>, ...];
+
+Days = {1, 2, 3, ...};
+```
+
+---
+
+## Debug
+
+Pour déboguer un problème:
+
+1. **Vérifier le chargement:**
+   ```python
+   from src.data_loader import load_dat_file
+   data = load_dat_file("path/to/file.dat")
+   print(data)
+   ```
+
+2. **Vérifier le prétraitement:**
+   ```python
+   from src.preprocessing import preprocess_flights
+   preprocessed = preprocess_flights(...)
+   print(f"Aéroports trouvés: {list(preprocessed['departures_sorted'].keys())}")
+   ```
+
+3. **Vérifier le modèle:**
+   ```python
+   model.write("debug.lp")  # Exporte le modèle en format LP
+   ```
+
+---
+
+## Installation license académique
+
+
+• Allez sur la page principale du site de Gurobi et connectez-vous à votre compte Gurobi via l’onglet Login, si
+vous ne l’êtes pas.
+
+• Cliquez sur l’onglet Downloads and licenses. Dans le paragraphe Request a license, cliquez sur l’onglet
+Academic License.
+
+• Acceptez les conditions d’utilisation de la licence académique. Comme vous pouvez le voir, votre licence
+académique Gurobi a bien été générée. Vous pouvez désormais installer votre licence en suivant les
+instructions données dans le paragraphe Installation sous le tableau de détails. Nous donnons quelques
+indications supplémentaires ci-dessous :
+
+– Sur macOs ou Linux.
+
+∗ Copiez la commande grbgetkey <clé>, ouvrez une fenêtre de terminal, collez la commande dans
+votrefenêtredeterminaletexécutez-la. Ilvousestdemandédechoisirledossierdanslequelstocker
+votre fichier de licence, tapez entrer afin de choisir le dossier par défaut. Nous vous recommandons
+de choisir le dossier par défaut et non un dossier personnel, autrement cela engendre des étapes
+supplémentaires (déclaration d’une variable d’environnement par ligne de commandes etc.).
+
+∗ Vous pouvez vérifier que votre licence est bien installée en tapant la commande gurobi.sh et en
+vérifiant qu’une ligne Academic license - for non-commercial use only - expires <date> est écrite
+dans le texte aﬃché.
+
+– Sur Windows.
+
+∗ Ouvrez le shell Gurobi en double-cliquant sur l’icône Gurobi9.1.1 ajoutée sur le bureau après
+l’installation.
+
+∗ Saisissez la <clé> fournie dans le paragraphe Installation.
+
+∗ Indiquez le nom du répertoire où stocker le fichier de licence ou appuyer sur la touche Entrée du
+clavier pour sélectionner l’emplacement par défaut.
