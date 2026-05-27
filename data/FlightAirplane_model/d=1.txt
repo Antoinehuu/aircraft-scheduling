@@ -1,0 +1,56 @@
+DataCplex_density=1_p=10_h=15_test_0.dat | Faisable=True | Temps=9.642s
+DataCplex_density=1_p=10_h=15_test_1.dat | Faisable=True | Temps=5.690s
+DataCplex_density=1_p=10_h=15_test_2.dat | Faisable=True | Temps=9.197s
+DataCplex_density=1_p=10_h=15_test_3.dat | Faisable=True | Temps=21.815s
+DataCplex_density=1_p=10_h=15_test_4.dat | Faisable=True | Temps=40.995s
+DataCplex_density=1_p=10_h=15_test_5.dat | Faisable=True | Temps=16.302s
+DataCplex_density=1_p=10_h=15_test_6.dat | Faisable=True | Temps=14.222s
+DataCplex_density=1_p=10_h=15_test_7.dat | Faisable=True | Temps=5.926s
+DataCplex_density=1_p=10_h=15_test_8.dat | Faisable=True | Temps=11.839s
+DataCplex_density=1_p=10_h=15_test_9.dat | Faisable=True | Temps=10.435s
+DataCplex_density=1_p=10_h=21_test_0.dat | Faisable=True | Temps=14.910s
+DataCplex_density=1_p=10_h=21_test_1.dat | Faisable=True | Temps=12.787s
+DataCplex_density=1_p=10_h=21_test_2.dat | Faisable=True | Temps=10.009s
+DataCplex_density=1_p=10_h=21_test_3.dat | Faisable=True | Temps=19.262s
+DataCplex_density=1_p=10_h=21_test_4.dat | Faisable=True | Temps=10.125s
+DataCplex_density=1_p=10_h=21_test_5.dat | Faisable=True | Temps=9.107s
+DataCplex_density=1_p=10_h=21_test_6.dat | Faisable=True | Temps=13.276s
+DataCplex_density=1_p=10_h=21_test_7.dat | Faisable=True | Temps=9.317s
+DataCplex_density=1_p=10_h=21_test_8.dat | Faisable=True | Temps=7.316s
+DataCplex_density=1_p=10_h=21_test_9.dat | Faisable=True | Temps=12.082s
+DataCplex_density=1_p=10_h=30_test_0.dat | Faisable=True | Temps=11.135s
+DataCplex_density=1_p=10_h=30_test_1.dat | Faisable=True | Temps=16.255s
+DataCplex_density=1_p=10_h=30_test_2.dat | Faisable=True | Temps=21.876s
+DataCplex_density=1_p=10_h=30_test_3.dat | Faisable=True | Temps=14.007s
+DataCplex_density=1_p=10_h=30_test_4.dat | Faisable=True | Temps=9.609s
+DataCplex_density=1_p=10_h=30_test_5.dat | Faisable=True | Temps=15.523s
+DataCplex_density=1_p=10_h=30_test_6.dat | Faisable=True | Temps=22.367s
+DataCplex_density=1_p=10_h=30_test_7.dat | Faisable=True | Temps=13.902s
+DataCplex_density=1_p=10_h=30_test_8.dat | Faisable=True | Temps=7.916s
+DataCplex_density=1_p=10_h=30_test_9.dat | Faisable=True | Temps=15.377s
+DataCplex_density=1_p=10_h=7_test_0.dat | Faisable=True | Temps=2.741s
+DataCplex_density=1_p=10_h=7_test_1.dat | Faisable=True | Temps=2.936s
+DataCplex_density=1_p=10_h=7_test_2.dat | Faisable=True | Temps=3.432s
+DataCplex_density=1_p=10_h=7_test_3.dat | Faisable=True | Temps=7.452s
+DataCplex_density=1_p=10_h=7_test_4.dat | Faisable=True | Temps=7.639s
+DataCplex_density=1_p=10_h=7_test_5.dat | Faisable=True | Temps=14.213s
+DataCplex_density=1_p=10_h=7_test_6.dat | Faisable=True | Temps=7.524s
+DataCplex_density=1_p=10_h=7_test_7.dat | Faisable=True | Temps=2.107s
+DataCplex_density=1_p=10_h=7_test_8.dat | Faisable=True | Temps=4.526s
+DataCplex_density=1_p=10_h=7_test_9.dat | Faisable=True | Temps=5.479s
+DataCplex_density=1_p=20_h=15_test_0.dat | Faisable=True | Temps=346.496s
+DataCplex_density=1_p=20_h=15_test_1.dat | Faisable=True | Temps=729.830s
+
+p=20_h=15_test_0 Temps=212.729s (307.44 work units) (presolve, symetrie, CI)
+p=20_h=15_test_0 Temps=405.059s (576.56 work units) (presolve, symetrie)
+p=20_h=15_test_0 Temps=293.372s (412.25 work units) (presolve)
+p=20_h=15_test_0 Temps=289.542s (419.81 work units) (presolve, CI)
+p=20_h=15_test_0 Temps=361.472s (487.30 work units) (CI)
+p=20_h=15_test_0 Temps=339.123s (488.13 work units)s (Normal)
+p=20_h=15_test_1 Temps=139.353s (149.80 work units) (presolve, symetrie, CI) 
+p=20_h=15_test_2 Temps=1311.591s (1866.99 work units)
+DataCplex_density=1_p=20_h=15_test_3.dat | Faisable=True | Temps=564.05 seconds (782.81 work units)
+DataCplex_density=1_p=20_h=15_test_4.dat | Faisable=True | Temps=75.98 seconds (113.62 work units)
+DataCplex_density=1_p=20_h=15_test_5.dat 148.80 seconds (194.39 work units)
+DataCplex_density=1_p=20_h=15_test_6.dat 421.45 seconds (642.52 work units)
+DataCplex_density=1_p=20_h=15_test_7.dat 203.18 seconds (282.32 work units)
