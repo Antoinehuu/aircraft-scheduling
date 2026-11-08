@@ -1,25 +1,24 @@
-# Aircraft-scheduling tuto installation
+# Aircraft-scheduling installation tutorial
 
-Ce projet de Tail assignement résout un problème d'attribution des tâches pour chaque avion dans le cadre d'un projet en cours de recherche opérationnelle à CentraleSupélec. 
+This Tail assignment project solves a task assignment problem for each aircraft as part of an ongoing operations research project at CentraleSupélec.
 
-## 1. Cloner le projet
+## 1. Clone the project
 
 ```bash
-git clone https://github.com/yourusername/aircraft-scheduling.git
+git clone https://github.com/antoinehuu/aircraft-scheduling.git
 cd aircraft-scheduling
-```
 
 ---
 
-## 2. Créer un environnement virtuel
+## 2. Create a virtual environment
 
-### Sur Linux/Mac:
+### On Linux/Mac:
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### Sur Windows:
+### On Windows:
 ```bash
 python -m venv venv
 venv\Scripts\activate
@@ -27,9 +26,9 @@ venv\Scripts\activate
 
 ---
 
-## 3. Installer les modules
+## 3. Install modules
 
-Nécéssite une license Gurobi, il y a un tuto pour une license académique à la fin.
+Requires a Gurobi license; there is a tutorial for an academic license at the end.
 
 ```bash
 pip install -r requirements.txt
@@ -37,88 +36,85 @@ pip install -r requirements.txt
 
 ---
 
-## 4. Vérifier que ça marche
+## 4. Check if it works
 
 ```bash
-# Test simple
-python -c "import gurobipy; print('✓ OK')"
+python -c "import gurobipy; print('OK')"
 ```
 
 ---
 
-# 📂 Structure du Projet - Aircraft Scheduling
+# Projet Structure - Aircraft Scheduling
 
-## Arborescence
+## Tree
 
 ```
 projet/
-├── main.py                           ← Script principal à exécuter
-├── README.md                         ← Ce fichier
+├── main.py
+├── README.md
 ├── requirements.txt
 │
-├── src/                              ← Package d'optimisation
+├── src/                              ← Optimization package
 │   ├── __init__.py
 │   ├── data_loader.py
-│   ├── preprocessing.py              ← Prétraitement des données
-│   └── model.py                      ← Implémentation et résolution du modèle
+│   ├── preprocessing.py
+│   └── model.py
 │
 ├── data                              ← Data sans les maintenances
 ├── data_with_maintenance_constraints/
 │   └── d=4/
-│       └── *.dat                     ← Fichiers d'instances
+│       └── *.dat                     ← Instances format
 │
-└── results/                          ← Résultats des exécutions
+└── results/                          
 ```
 
 ---
 
-## Description des fichiers
+
+---
+
+## File descriptions
 
 ### `main.py`
-**Fichier principal à exécuter**
+**Main file to run**
 
-- Lance le solveur sur les instances
-- Affiche un résumé des résultats
-- Gère les fichiers d'entrée/sortie
+- Runs the solver on the instances
+- Displays a summary of the results
+- Handles input/output files
 
-**Utilisation:**
+**Usage:**
 ```bash
 python main.py
-```
+‘‘‘
 
 ### `src/data_loader.py`
-**Chargement des données**
 
-Fonction principale:
-- `load_dat_file(filename)` → Charge un fichier .dat et retourne toutes les données
+Main function:
+- `load_dat_file(filename)` → Loads a .dat file and returns all data
 
-Responsabilités:
-- Parsing du fichier avec regex
-- Extraction des paramètres (nb_flights, horizon, etc.)
-- Extraction des vols, coûts, avions, aéroports
+- File parsing with regex
+Extraction of parameters (nb_flights, horizon, etc.)
+Extraction of flights, costs, aircraft, airports
 
 ### `src/preprocessing.py`
-**Prétraitement des données**
 
-Fonctions principales:
-- `preprocess_flights(flights, airports, aircraft_init, m_airports)` → Pré-traite les données
-- `find_compatible_flights(data, airport, target_fid, flight_type)` → Recherche binaire
+Main functions:
+- `preprocess_flights(flights, airports, aircraft_init, m_airports)` 
+- `find_compatible_flights(data, airport, target_fid, flight_type)` 
 
-Optimisations via des dictionnaires adaptés
+Optimizations via suitable dictionaries
 
 ### `src/model.py`
-**Construction et résolution du modèle**
 
-- `build_and_solve_model(...)` → Construit le modèle Gurobi
-- `_add_flow_constraints()` → Contraintes C2
-- `_add_base_constraints()` → Contraintes C3
-- `_add_duplicate_constraints()` → Contraintes C4
-- `_add_maintenance_constraints()` → Contraintes de maintenance
+- `build_and_solve_model(...)`
+- `_add_flow_constraints()` → Contraints C2
+- `_add_base_constraints()` → Contraints C3
+- `_add_duplicate_constraints()` → Contraints C4
+- `_add_maintenance_constraints()` → Maintenance contraints
 
 ### `src/__init__.py`
-**Package init**
 
-Exporte les fonctions principales du package pour utilisation externe.
+Exports the package's main functions for external use.
 
 ---
 
@@ -130,15 +126,15 @@ Exporte les fonctions principales du package pour utilisation externe.
 python main.py
 ```
 
-### Traiter plusieurs fichiers
+### Process multiple files
 
-Modifier `main()` dans `main.py`:
+Modify `main()` in `main.py`:
 
 ```python
-# Option 1: Tous les fichiers d'un dossier
+# Option 1: All files in a folder
 paths = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".dat")]
 
-# Option 2: Fichiers spécifiques
+# Option 2: Specific files
 paths = [
     "data_with_maintenance_constraints/d=4/DataCplex_density=1_p=20_h=15_test_0.dat",
     "data_with_maintenance_constraints/d=4/DataCplex_density=1_p=20_h=15_test_1.dat"
@@ -153,23 +149,23 @@ paths = [
 main.py
   │
   ├─→ load_dat_file()
-  │   └─→ Charge fichier .dat
+  │   └─→ Loads .dat file
   │       └─→ Returns: nb_flights, cap_maintenance, horizon, ...
   │
   ├─→ preprocess_flights()
-  │   └─→ Indexe et trie les données
-  │       └─→ Returns: data (dict optimisé)
+  │   └─→ Indexes and sorts the data
+  │       └─→ Returns: data (optimized dict)
   │
   └─→ build_and_solve_model()
-      ├─→ Crée variables Gurobi (x, y, z)
-      ├─→ Ajoute contraintes
-      │   ├─→ C1: Couverture
-      │   ├─→ C2: Flux (hors base)
-      │   ├─→ C3: Flux (base)
-      │   ├─→ C4: Doublons
+      ├─→ Creates Gurobi variables (x, y, z)
+      ├─→ Adds constraints
+      │   ├─→ C1: Coverage
+      │   ├─→ C2: Flow (excluding base)
+      │   ├─→ C3: Flow (base)
+      │   ├─→ C4: Duplicates
       │   └─→ Maintenance
-      ├─→ Définit objectif
-      └─→ Résout le modèle
+      ├─→ Defines objective
+      └─→ Solves the model
           └─→ Returns: (model, x, y, z)
 ```
 
@@ -179,21 +175,22 @@ main.py
 Dans `main.py`:
 
 ```python
-model.setParam("OutputFlag", 1)      # Afficher les logs
-model.setParam("Presolve", 2)        # Présolve agressif
-model.setParam("MIPGap", 0.02)       # Gap tolérance 2%
+model.setParam("OutputFlag", 1)      # Display logs
+model.setParam("Presolve", 2)        # Aggressive presolve
+model.setParam("MIPGap", 0.02)       # Gap tolerance 2%
 ```
 
-À modifier selon les besoins:
-- MIPGap: Plus petit = plus de temps mais meilleure solution
-- Presolve: -1 (auto), 0 (off), 1 (conservatif), 2 (agressif)
-- Threads: Nombre de threads parallèles
+To modify as needed:
+
+- MIPGap: Smaller = more time but better solution
+- Presolve: -1 (auto), 0 (off), 1 (conservative), 2 (aggressive)
+- Threads: Number of parallel threads
 
 ---
 
-## Format du fichier .dat
+## .dat file format
 
-Exemple:
+Example:
 ```
 Nbflight = 20;
 capmaintenance = 5;
@@ -220,61 +217,59 @@ Days = {1, 2, 3, ...};
 
 ## Debug
 
-Pour déboguer un problème:
+To debug a problem:
 
-1. **Vérifier le chargement:**
+1. **Check the loading:**
    ```python
    from src.data_loader import load_dat_file
    data = load_dat_file("path/to/file.dat")
    print(data)
    ```
 
-2. **Vérifier le prétraitement:**
+2. **Check the preprocessing:**
    ```python
    from src.preprocessing import preprocess_flights
    preprocessed = preprocess_flights(...)
    print(f"Aéroports trouvés: {list(preprocessed['departures_sorted'].keys())}")
    ```
 
-3. **Vérifier le modèle:**
+3. **Check the model:**
    ```python
-   model.write("debug.lp")  # Exporte le modèle en format LP
+   model.write("debug.lp")  # Exports the model in LP format, constraints are labeled
    ```
 
 ---
 
-## Installation license académique
+## Academic license installation
 
+• Go to the main page of the Gurobi website and log in to your Gurobi account via the Login tab, if
+you are not already logged in.
 
-• Allez sur la page principale du site de Gurobi et connectez-vous à votre compte Gurobi via l’onglet Login, si
-vous ne l’êtes pas.
+• Click on the Downloads and licenses tab. In the Request a license paragraph, click on the
+Academic License tab.
 
-• Cliquez sur l’onglet Downloads and licenses. Dans le paragraphe Request a license, cliquez sur l’onglet
-Academic License.
+• Accept the terms of use of the academic license. As you can see, your Gurobi academic license has been generated. You can now install your license by following the
+instructions given in the Installation paragraph under the details table. We give a few
+additional indications below:
 
-• Acceptez les conditions d’utilisation de la licence académique. Comme vous pouvez le voir, votre licence
-académique Gurobi a bien été générée. Vous pouvez désormais installer votre licence en suivant les
-instructions données dans le paragraphe Installation sous le tableau de détails. Nous donnons quelques
-indications supplémentaires ci-dessous :
+– On macOS or Linux.
 
-– Sur macOs ou Linux.
+* Copy the command grbgetkey <key>, open a terminal window, paste the command into
+your terminal window and run it. You are asked to choose the folder in which to store
+your license file; press Enter to choose the default folder. We recommend
+choosing the default folder and not a personal folder, otherwise this generates additional steps
+(setting an environment variable via command line, etc.).
 
-∗ Copiez la commande grbgetkey <clé>, ouvrez une fenêtre de terminal, collez la commande dans
-votrefenêtredeterminaletexécutez-la. Ilvousestdemandédechoisirledossierdanslequelstocker
-votre fichier de licence, tapez entrer afin de choisir le dossier par défaut. Nous vous recommandons
-de choisir le dossier par défaut et non un dossier personnel, autrement cela engendre des étapes
-supplémentaires (déclaration d’une variable d’environnement par ligne de commandes etc.).
+* You can check that your license is properly installed by typing the command gurobi.sh and
+checking that a line Academic license - for non-commercial use only - expires <date> is written
+in the displayed text.
 
-∗ Vous pouvez vérifier que votre licence est bien installée en tapant la commande gurobi.sh et en
-vérifiant qu’une ligne Academic license - for non-commercial use only - expires <date> est écrite
-dans le texte aﬃché.
+– On Windows.
 
-– Sur Windows.
+* Open the Gurobi shell by double-clicking on the Gurobi9.1.1 icon added to the desktop after
+installation.
 
-∗ Ouvrez le shell Gurobi en double-cliquant sur l’icône Gurobi9.1.1 ajoutée sur le bureau après
-l’installation.
+* Enter the <key> provided in the Installation paragraph.
 
-∗ Saisissez la <clé> fournie dans le paragraphe Installation.
-
-∗ Indiquez le nom du répertoire où stocker le fichier de licence ou appuyer sur la touche Entrée du
-clavier pour sélectionner l’emplacement par défaut.
+* Specify the name of the directory where to store the license file or press the Enter key on the
+keyboard to select the default location.

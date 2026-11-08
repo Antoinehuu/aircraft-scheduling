@@ -1,6 +1,5 @@
-# src/data_loader.py
 """
-Module pour charger et parser les fichiers .dat
+Module to load and parse .dat files
 """
 
 import re
@@ -9,10 +8,10 @@ from collections import defaultdict
 
 def load_dat_file(filename):
     """
-    Charge un fichier .dat et extrait toutes les données nécessaires.
+    Loads a .dat file and extracts all necessary data.
     
     Args:
-        filename: Chemin vers le fichier .dat
+        filename: Path to the .dat file
         
     Returns:
         tuple: (nb_flights, cap_maintenance, horizon, flights, costs, m_costs, 
@@ -21,12 +20,12 @@ def load_dat_file(filename):
     with open(filename, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Extraction des paramètres
+    # Parameter extraction
     nb_flight = int(re.search(r'Nbflight\s*=\s*(\d+);', content).group(1))
     cap_maintenance = int(re.search(r'capmaintenance\s*=\s*(\d+);', content).group(1))
     horizon = int(re.search(r'horizon\s*=\s*(\d+);', content).group(1))
 
-    # Extraction des vols
+    # Flight extraction
     flights_raw = re.findall(r'<(.*?)>', re.search(r'Flight\s*=\s*\{(.*?)\};', content, re.DOTALL).group(1))
     flights = []
     for f in flights_raw:
@@ -40,35 +39,35 @@ def load_dat_file(filename):
             'day': int(parts[5])
         })
 
-    # Extraction des coûts
+    # Cost extraction
     cost_section = re.search(r'Cost\s*=\s*\[(.*?)\];', content, re.DOTALL).group(1)
     costs_raw = re.findall(r'\[(.*?)\]', cost_section)
     costs = [list(map(float, c.strip(',').split(','))) for c in costs_raw if c.strip()]
 
-    # Extraction des coûts de maintenance
+    # Maintenance cost extraction
     m_cost_section = re.search(r'CostMaintenance\s*=\s*\[(.*?)\];', content, re.DOTALL).group(1)
     m_costs_raw = re.findall(r'\[(.*?)\]', m_cost_section)
     m_costs = [list(map(float, c.strip(',').split(','))) for c in m_costs_raw if c.strip()]
     
-    # Extraction des avions
+    # Aircraft extraction
     aircraft_raw = re.findall(r'<(.*?)>', re.search(r'Aircraft\s*=\s*\[(.*?)\];', content, re.DOTALL).group(1))
     aircraft_init = {}
     for a in aircraft_raw:
         idx, city = a.split(',')
         aircraft_init[int(idx)] = city.strip()
         
-    # Extraction des aéroports
+    # Airport extraction
     airports_raw = re.search(r'Airports\s*=\s*\{(.*?)\};', content, re.DOTALL).group(1)
     airports = {a.strip(): True for a in airports_raw.split(',') if a.strip()}
     
-    # Extraction des aéroports de maintenance
+    # Maintenance airport extraction
     m_airports_raw = re.search(r'Airportmaintenance\s*=\s\s*\{(.*?)\};', content, re.DOTALL).group(1)
     m_airports = {a.strip(): True for a in m_airports_raw.split(',') if a.strip()}
     
-    # Extraction des jours
+    # Day extraction
     Days_raw = re.search(r'Days\s*=\s\s*\{(.*?)\};', content, re.DOTALL).group(1)
     Days_dict = {int(a.strip()): True for a in Days_raw.split(',') if a.strip()}
     Days = list(Days_dict.keys())
-    Days = Days[1:]  # Supprimer le premier jour
+    Days = Days[1:]  # Remove the first day
     
     return nb_flight, cap_maintenance, horizon, flights, costs, m_costs, aircraft_init, airports, m_airports, Days

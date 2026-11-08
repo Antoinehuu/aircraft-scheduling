@@ -1,14 +1,7 @@
-#!/usr/bin/env python3
-# main.py
-"""
-Script principal pour résoudre les problèmes d'optimisation d'horaires d'avions
-"""
-
 import os
 import time
-import sys
 
-# Importer les modules
+# Import the modules
 from src.data_loader import load_dat_file
 from src.preprocessing import preprocess_flights
 from src.model import build_and_solve_model
@@ -16,35 +9,35 @@ from src.model import build_and_solve_model_2
 
 def solve_instance(filepath):
     """
-    Résout une instance du problème.
+    Solves an instance of the problem.
     
     Args:
-        filepath: Chemin vers le fichier .dat
+        filepath: Path to the .dat file
         
     Returns:
-        dict: Résultats (temps, dimensions du problème, etc.)
+        dict: Results (time, problem dimensions, etc.)
     """
     
     print(f"\n{'='*70}")
-    print(f"Traitement: {os.path.basename(filepath)}")
+    print(f"Processing: {os.path.basename(filepath)}")
     print(f"{'='*70}")
     
-    # Charger les données
-    print("▶ Chargement des données...")
+    # Load the data
+    print("▶ Loading data...")
     nb_flights, cap_maintenance, horizon, flights, costs, m_costs, \
         aircraft_init, airports, m_airports, Days = load_dat_file(filepath)
     
     nb_aircrafts = len(aircraft_init)
-    print(f"  ✓ {nb_flights} vols, {nb_aircrafts} avions, horizon={horizon}")
+    print(f"  ✓ {nb_flights} flights, {nb_aircrafts} aircraft, horizon={horizon}")
     
-    # Prétraitement
-    print("▶ Prétraitement des données...")
+    # Preprocessing
+    print("▶ Preprocessing data...")
     data = preprocess_flights(flights, set(range(nb_aircrafts)), aircraft_init, m_airports)
-    print(f"  ✓ Prétraitement complété")
+    print(f"  ✓ Preprocessing completed")
     
     
-    # Construire et résoudre le modèle
-    print("▶ Construction du modèle...")
+    # Build and solve the model
+    print("▶ Building the model...")
     start_time = time.perf_counter()
     
     model, x, y, z = build_and_solve_model(
@@ -52,31 +45,31 @@ def solve_instance(filepath):
         aircraft_init, airports, m_airports, Days, data
     )
     
-    # Paramètres Gurobi
+    # Gurobi parameters
     model.setParam("OutputFlag", 1)
     model.setParam("Presolve", 2)
     model.setParam("MIPGap", 0.02)
     
-    print("▶ Optimisation...")
+    print("▶ Optimization...")
     model.optimize()
     
     model.write("model.lp")
     
     solve_time = time.perf_counter() - start_time
     
-    # Statistiques
+    # Statistics
     nb_vars = model.NumVars
     nb_constrs = model.NumConstrs
     nb_nonzeros = model.NumNZs
     nb_work = model.Work
     
-    # Paramètres Gurobi
+    # Gurobi parameters
     model.setParam("OutputFlag", 1)
     model.setParam("Presolve", 1)
     model.setParam("MIPGap", 0.02)   
     
-    # 2ème optimisation pour réduire les maintenances 
-    # et atteindre un minimum local 
+    # 2nd optimization to reduce maintenances 
+    # and reach a local minimum 
     model, x, y, z = build_and_solve_model_2(
         nb_flights, flights, costs, m_costs,
         aircraft_init, m_airports, Days, data, model, x, y, z
@@ -98,38 +91,38 @@ def solve_instance(filepath):
         'status': model.status
     }
     
-    # Affichage des résultats
-    print(f"\n▶ Résultats:")
-    print(f"  Statut: {'Optimal' if model.status == 2 else 'Suboptimal/Infeasible'}")
-    print(f"  Objectif: {results['obj_value']:.2f}" if results['obj_value'] else "  Objectif: N/A")
-    print(f"  Temps: {solve_time:.3f}s")
-    print(f"  Travail Gurobi: {nb_work:.3f} unités")
+    # Display results
+    print(f"\n▶ Results:")
+    print(f"  Status: {'Optimal' if model.status == 2 else 'Suboptimal/Infeasible'}")
+    print(f"  Objective: {results['obj_value']:.2f}" if results['obj_value'] else "  Objective: N/A")
+    print(f"  Time: {solve_time:.3f}s")
+    print(f"  Gurobi work: {nb_work:.3f} units")
     print(f"  Variables: {nb_vars}")
-    print(f"  Contraintes: {nb_constrs}")
-    print(f"  Non-zéros: {nb_nonzeros}")
+    print(f"  Constraints: {nb_constrs}")
+    print(f"  Non-zeros: {nb_nonzeros}")
     
     return results
 
 
 def main():
-    """Fonction principale"""
+    """Main function"""
     
     print("\n" + "="*70)
-    print("OPTIMISATION TAIL ASSIGNEMENT")
+    print("TAIL ASSIGNMENT OPTIMIZATION")
     print("="*70)
     
-    # Fichiers à traiter
+    # Files to process
     folder = "data_with_maintenance_constraints/d=4"
     
-    # Option 1: Un fichier spécifique
+    # Option 1: A specific file
     paths = ["data_with_maintenance_constraints/d=4/DataCplex_density=1_p=10_h=15_test_0.dat"]
     
-    # Option 2: Tous les fichiers d'un dossier
+    # Option 2: All files in a folder
     #paths = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".dat")]
     
     paths.sort()
     
-    # Résoudre tous les fichiers
+    # Solve all files
     all_results = []
     
     for path in paths:
@@ -138,22 +131,22 @@ def main():
             
             all_results.append(results)
         except Exception as e:
-            print(f"❌ Erreur pour {os.path.basename(path)}: {e}")
+            print(f"❌ Error for {os.path.basename(path)}: {e}")
             import traceback
             traceback.print_exc()
     
-    # Résumé final
+    # Final summary
     print(f"\n{'='*70}")
-    print("RÉSUMÉ FINAL")
+    print("FINAL SUMMARY")
     print(f"{'='*70}")
     
     for res in all_results:
         print(f"\n{res['filename']}")
-        print(f"  Vols: {res['nb_flights']}, Avions: {res['nb_aircrafts']}")
-        print(f"  Temps: {res['solve_time']:.3f}s | Travail: {res['work_units']:.3f} | "
+        print(f"  Flights: {res['nb_flights']}, Aircraft: {res['nb_aircrafts']}")
+        print(f"  Time: {res['solve_time']:.3f}s | Work: {res['work_units']:.3f} | "
               f"Vars: {res['nb_vars']} | Constrs: {res['nb_constrs']}")
         if res['obj_value']:
-            print(f"  Objectif: {res['obj_value']:.2f}")
+            print(f"  Objective: {res['obj_value']:.2f}")
     
     print(f"\n{'='*70}\n")
     

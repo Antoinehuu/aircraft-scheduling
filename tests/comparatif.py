@@ -12,7 +12,7 @@ def canonical_constraint(model, constr, tol=1e-9):
         if abs(coeff) > tol:
             terms.append((var.VarName, round(coeff, 9)))
 
-    # IMPORTANT : tri pour ignorer l'ordre
+    # IMPORTANT: sort to ignore order
     terms.sort()
 
     return (

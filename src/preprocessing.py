@@ -1,6 +1,6 @@
 # src/preprocessing.py
 """
-Module de prétraitement des données pour optimisation Gurobi
+Data preprocessing module for Gurobi optimization
 """
 
 import bisect
@@ -9,34 +9,34 @@ from collections import defaultdict
 
 def preprocess_flights(flights, airports, aircraft_init, m_airports):
     """
-    Prétraitement complet des données pour éviter les recalculs.
+    Complete data preprocessing to avoid recomputations.
     
-    Optimisations:
-    - Tris uniques au lieu de répétés
-    - Index temporels pré-calculés
-    - Structures immuables pour accès O(1)
+    Optimizations:
+    - Single sorts instead of repeated ones
+    - Pre-computed temporal indices
+    - Immutable structures for O(1) access
     
     Args:
-        flights: Liste des vols
-        airports: Set des aéroports
-        aircraft_init: Dict {aircraft_id: airport_initial}
-        m_airports: Set des aéroports de maintenance
+        flights: List of flights
+        airports: Set of airports
+        aircraft_init: Dict {aircraft_id: initial_airport}
+        m_airports: Set of maintenance airports
         
     Returns:
-        dict: Dictionnaire avec données prétraitées
+        dict: Dictionary with preprocessed data
     """
     
-    # Index par aéroport et type de vol
+    # Index by airport and flight type
     flights_by_origin = defaultdict(list)
     flights_by_destination = defaultdict(list)
     
-    # Mappings immuables
+    # Immutable mappings
     flight_departure_time = {}
     flight_arrival_time = {}
     flight_origin = {}
     flight_destination = {}
     
-    # Première passe: indexation
+    # First pass: indexing
     for flight in flights:
         fid = flight['id']
         origin = flight['origin']
@@ -52,7 +52,7 @@ def preprocess_flights(flights, airports, aircraft_init, m_airports):
         flight_origin[fid] = origin
         flight_destination[fid] = dest
     
-    # Deuxième passe: tris uniques
+    # Second pass: single sorts
     departures_sorted = {}
     arrivals_sorted = {}
     
@@ -68,7 +68,7 @@ def preprocess_flights(flights, airports, aircraft_init, m_airports):
             key=lambda fid: flight_arrival_time[fid]
         )
     
-    # Créer dictionnaire des vols par ID
+    # Create dictionary of flights by ID
     T = {f['id']: f for f in flights}
     
     return {
@@ -86,16 +86,16 @@ def preprocess_flights(flights, airports, aircraft_init, m_airports):
 
 def find_compatible_flights(data, airport, target_fid, flight_type='arrivals'):
     """
-    Trouve les vols compatibles avec recherche binaire.
+    Finds compatible flights using binary search.
     
     Args:
-        data: Données prétraitées
-        airport: Aéroport à considérer
-        target_fid: ID du vol cible
-        flight_type: 'arrivals' ou 'departures'
+        data: Preprocessed data
+        airport: Airport to consider
+        target_fid: Target flight ID
+        flight_type: 'arrivals' or 'departures'
         
     Returns:
-        list: IDs des vols compatibles
+        list: IDs of compatible flights
     """
     if flight_type == 'arrivals':
         arrivals = data['arrivals_sorted'].get(airport, [])

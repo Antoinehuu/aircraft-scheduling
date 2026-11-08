@@ -1,6 +1,6 @@
 # src/model.py
 """
-Module de construction et résolution du modèle d'optimisation
+Module for building and solving the optimization model
 """
 
 import bisect
@@ -11,20 +11,20 @@ from gurobipy import Model, GRB, quicksum
 def build_and_solve_model(nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
                           aircraft_init, airports, m_airports, Days, data):
     """
-    Construit et résout le modèle d'optimisation.
+    Builds and solves the optimization model.
     
     Args:
-        nb_flights: Nombre de vols
-        cap_maintenance: Capacité de maintenance
-        horizon: Horizon de maintenance
-        flights: Liste des vols
-        costs: Coûts des vols
-        m_costs: Coûts de maintenance
-        aircraft_init: Aéroports initiaux des avions
-        airports: Set des aéroports
-        m_airports: Set des aéroports de maintenance
-        Days: Liste des jours
-        data: Données prétraitées
+        nb_flights: Number of flights
+        cap_maintenance: Maintenance capacity
+        horizon: Maintenance horizon
+        flights: List of flights
+        costs: Flight costs
+        m_costs: Maintenance costs
+        aircraft_init: Initial airports of the aircraft
+        airports: Set of airports
+        m_airports: Set of maintenance airports
+        Days: List of days
+        data: Preprocessed data
         
     Returns:
         tuple: (model, x, y, z, nb_vars, nb_constrs, nb_nonzeros)
@@ -35,7 +35,7 @@ def build_and_solve_model(nb_flights, cap_maintenance, horizon, flights, costs, 
     Flights_id = range(1, nb_flights + 1)
     
     
-    # Dictionnaires utiles
+    # Useful dictionaries
     m_Flights_id = {f['id']: f['dest'] for f in flights if f['dest'] in m_airports}
     flight_day = {i['id']: i['day'] for i in flights}
     
@@ -50,14 +50,14 @@ def build_and_solve_model(nb_flights, cap_maintenance, horizon, flights, costs, 
         for d in Days
     }
     
-    # Jours fictifs
+    # Fictitious days
     Days_fictive = [i for i in range(-horizon + 1, 1)]
     tot_days = Days_fictive + Days
     
-    # Mapping aéroports
+    # Airport mapping
     ap_to_id = {ap: idx for idx, ap in enumerate(m_airports)}
     
-    # Création du modèle
+    # Model creation
     model = Model("aircraft_scheduling")
     
     # Variables
@@ -67,27 +67,27 @@ def build_and_solve_model(nb_flights, cap_maintenance, horizon, flights, costs, 
     
     airports_set = set(data['departures_sorted'].keys())
     
-    # C1 — Couverture
+    # C1 — Coverage
     model.addConstrs(
         (quicksum(x[i, t] for t in Aircraft) == 1 for i in Flights_id),
-        name="couverture"
+        name="coverage"
     )
     
-    # C2 — Flux (hors base)
+    # C2 — Flow (excluding base)
     _add_flow_constraints(model, Aircraft, aircraft_init, data, x, airports_set)
     
-    # C3 — Flux (base)
+    # C3 — Flow (base)
     _add_base_constraints(model, Aircraft, aircraft_init, data, x)
     
-    # C4 — Doublons
+    # C4 — Duplicates
     _add_duplicate_constraints(model, Aircraft, flights, x)
     
-    # Contraintes de maintenance
+    # Maintenance constraints
     _add_maintenance_constraints(model, Aircraft, Days, Days_fictive, tot_days,
                                  horizon, Flights_id, flights, flights_by_day, flights_by_origin_day,
                                  m_airports, cap_maintenance, x, y, z)
     
-    # Objectif
+    # Objective
     cost_it = {
         (i, t): m_costs[t][ap_to_id[data['flight_destination'][i]]]
         for i in m_Flights_id for t in Aircraft
@@ -105,7 +105,7 @@ def build_and_solve_model(nb_flights, cap_maintenance, horizon, flights, costs, 
 
 
 def _add_flow_constraints(model, Aircraft, aircraft_init, data, x, airports_set):
-    """Ajoute les contraintes de flux (hors base) - C2"""
+    """Adds flow constraints (excluding base) - C2"""
     for t in Aircraft:
         for airport in airports_set:
             if airport == aircraft_init.get(t):
@@ -135,7 +135,7 @@ def _add_flow_constraints(model, Aircraft, aircraft_init, data, x, airports_set)
 
 
 def _add_base_constraints(model, Aircraft, aircraft_init, data, x):
-    """Ajoute les contraintes de flux (base) - C3"""
+    """Adds flow constraints (base) - C3"""
     for t in Aircraft:
         airport = aircraft_init.get(t)
         departures = data['departures_sorted'].get(airport, [])
@@ -162,7 +162,7 @@ def _add_base_constraints(model, Aircraft, aircraft_init, data, x):
 
 
 def _add_duplicate_constraints(model, Aircraft, flights, x):
-    """Ajoute les contraintes de doublons - C4"""
+    """Adds duplicate constraints - C4"""
     seen = {}
     Doublons = []
     for fi in flights:
@@ -175,19 +175,19 @@ def _add_duplicate_constraints(model, Aircraft, flights, x):
     if Doublons:
         model.addConstrs(
             (x[i, t] + x[j, t] <= 1 for t in Aircraft for (i, j) in Doublons),
-            name="doublons"
+            name="duplicates"
         )
 
 
 def _add_maintenance_constraints(model, Aircraft, Days, Days_fictive, tot_days, horizon,
                                 Flights_id, flights, flights_by_day, flights_by_origin_day,
                                 m_airports, cap_maintenance, x, y, z):
-    """Ajoute les contraintes de maintenance"""
+    """Adds maintenance constraints"""
     
     flight_departure = {i['id']: i['departure'] for i in flights}
     flight_arrival = {i['id']: i['arrival'] for i in flights}
     
-    # Condition initiale de maintenance
+    # Initial maintenance condition
     d_m = [random.choice(Days_fictive) for _ in Aircraft]
     
     model.addConstrs(
@@ -195,20 +195,20 @@ def _add_maintenance_constraints(model, Aircraft, Days, Days_fictive, tot_days, 
         name="initial_maintenance"
     )
     
-    # Au moins une maintenance tous les horizon jours
+    # At least one maintenance every horizon days
     model.addConstrs(
         (quicksum(y[d, t] for d in range(d0 + 1, d0 + horizon + 1) if d in tot_days) >= 1
          for t in Aircraft for d0 in tot_days if d0 + horizon in tot_days),
         name="maintenance_window"
     )
     
-    # L'avion arrive à destination pour la maintenance
+    # The aircraft arrives at the destination for maintenance
     model.addConstrs(
         (x[i, t] >= z[i, t] for i in Flights_id for t in Aircraft),
         name="arrival_for_maintenance"
     )
     
-    # Le dernier vol du jour match avec l'aéroport de maintenance
+    # The last flight of the day matches the maintenance airport
     model.addConstrs(
         (
             z[i, t] + x[j, t] <= 1
@@ -221,7 +221,7 @@ def _add_maintenance_constraints(model, Aircraft, Days, Days_fictive, tot_days, 
         name="last_flight_logic"
     );
     
-    # Si on envoie un avion en maintenance alors il y a un vol pour le réaliser
+    # If an aircraft is sent for maintenance, then there is a flight to carry it out
     model.addConstrs(
         (quicksum(z[j["id"], t] for k in m_airports 
                   for j in flights_by_origin_day.get((k, d), [])) == y[d, t]
@@ -229,7 +229,7 @@ def _add_maintenance_constraints(model, Aircraft, Days, Days_fictive, tot_days, 
         name="maintenance_flight_link"
     )
     
-    # Contrainte de capacité maintenance
+    # Maintenance capacity constraint
     model.addConstrs(
         (quicksum(z[i["id"], t] for t in Aircraft 
                   for i in flights_by_origin_day.get((k, d), [])) <= cap_maintenance
@@ -240,7 +240,7 @@ def _add_maintenance_constraints(model, Aircraft, Days, Days_fictive, tot_days, 
 def build_and_solve_model_2(
     nb_flights, flights, costs, m_costs,
     aircraft_init, m_airports, Days, data, model, x, y, z):
-    """optimise localement en retirant les maintenances en trop"""
+    """locally optimizes by removing excess maintenances"""
 
     nb_aircrafts = len(aircraft_init)
     Aircraft = range(nb_aircrafts)

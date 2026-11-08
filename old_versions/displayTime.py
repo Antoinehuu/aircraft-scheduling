@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 
 # ============================================
-# TABLE DE RÉFÉRENCE (depuis vos résultats)
+# REFERENCE TABLE (from your results)
 # ============================================
 reference_data = {
     (10, 15): {"time": (60, 90), "vars": 38000},
@@ -14,10 +14,8 @@ reference_data = {
     (30, 15): {"time": (3000, 13000), "vars": 500000},
 }
 
-# ============================================
-# DONNÉES DATACPLEX (à partir de vos fichiers)
-# ============================================
-paths = ["data.text"]  # Remplacer par votre fichier
+
+paths = ["data.text"] 
 
 datacplex_data = defaultdict(list)
 density = None
@@ -38,24 +36,24 @@ for path in paths:
                     density = d
                     datacplex_data[(p, h)].append(t)
     except FileNotFoundError:
-        print(f"⚠️  Fichier {path} non trouvé. Utilisation des données de test uniquement.")
+        print(f"⚠️  File {path} not found. Using test data only.")
 
 # ============================================
-# CALCUL DES MOYENNES DATACPLEX
+# DATACPLEX AVERAGE COMPUTATION
 # ============================================
 datacplex_avg = {}
 for (p, h), times in datacplex_data.items():
     datacplex_avg[(p, h)] = np.mean(times)
 
 # ============================================
-# VISUALISATION : COMPARAISON
+# VISUALIZATION: COMPARISON
 # ============================================
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 
-# --- GRAPHIQUE 1 : Temps de résolution ---
-ax1.set_title("Comparaison des temps de résolution", fontsize=14, fontweight='bold')
+# --- CHART 1: Solution times ---
+ax1.set_title("Comparison of solution times", fontsize=14, fontweight='bold')
 
-# Données de référence
+# Reference data
 for p in [10, 20, 30]:
     times_ref = []
     hs_ref = []
@@ -67,9 +65,9 @@ for p in [10, 20, 30]:
     
     if hs_ref:
         ax1.plot(hs_ref, times_ref, marker='s', linestyle='--', linewidth=2, 
-                markersize=8, label=f"Référence p={p}", alpha=0.7)
+                markersize=8, label=f"Reference p={p}", alpha=0.7)
 
-# Données DataCplex
+# DataCplex data
 for p in sorted(set([key[0] for key in datacplex_avg])):
     hs_dc = []
     times_dc = []
@@ -86,13 +84,13 @@ for p in sorted(set([key[0] for key in datacplex_avg])):
                 label=f"DataCplex (d={density}) p={p}")
 
 ax1.set_xlabel("Horizon (h)", fontsize=12)
-ax1.set_ylabel("Temps de résolution (s)", fontsize=12)
+ax1.set_ylabel("Solution time (s)", fontsize=12)
 ax1.set_yscale("log")
 ax1.legend(fontsize=10)
 ax1.grid(True, alpha=0.3)
 
-# # --- GRAPHIQUE 2 : Nombre de variables ---
-# ax2.set_title("Nombre de variables en fonction de h", fontsize=14, fontweight='bold')
+# # --- CHART 2: Number of variables ---
+# ax2.set_title("Number of variables as a function of h", fontsize=14, fontweight='bold')
 
 # for p in [10, 20, 30]:
 #     hs_ref = []
@@ -104,10 +102,10 @@ ax1.grid(True, alpha=0.3)
     
 #     if hs_ref:
 #         ax2.plot(hs_ref, vars_ref, marker='s', linestyle='--', linewidth=2, 
-#                 markersize=8, label=f"Référence p={p}", alpha=0.7)
+#                 markersize=8, label=f"Reference p={p}", alpha=0.7)
 
 # ax2.set_xlabel("Horizon (h)", fontsize=12)
-# ax2.set_ylabel("Nombre de variables", fontsize=12)
+# ax2.set_ylabel("Number of variables", fontsize=12)
 # ax2.set_yscale("log")
 # ax2.legend(fontsize=10)
 # ax2.grid(True, alpha=0.3)
@@ -116,13 +114,13 @@ plt.tight_layout()
 plt.show()
 
 # ============================================
-# TABLEAU COMPARATIF
+# COMPARISON TABLE
 # ============================================
 print("\n" + "="*80)
-print("COMPARAISON DÉTAILLÉE".center(80))
+print("DETAILED COMPARISON".center(80))
 print("="*80 + "\n")
 
-print(f"{'(p, h)':<10} | {'Référence':<25} | {'DataCplex':<20} | {'Différence':<15}")
+print(f"{'(p, h)':<10} | {'Reference':<25} | {'DataCplex':<20} | {'Difference':<15}")
 print("-"*80)
 
 for (p, h) in sorted(reference_data.keys()):
