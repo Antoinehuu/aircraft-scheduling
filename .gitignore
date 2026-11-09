@@ -1,12 +1,10 @@
 # Python
 __pycache__/
-
 .ds_Store
-
 *.lp
-
 venv/
 
+test_or_tools.py
 
 
 
