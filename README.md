@@ -7,11 +7,13 @@ This Tail assignment project solves a task assignment problem for each aircraft 
 ```bash
 git clone https://github.com/antoinehuu/aircraft-scheduling.git
 cd aircraft-scheduling
+```
 
 ---
 
 ## 2. Create a virtual environment
 
+Gurobi only support 3.10, 3.11, 3.12, 3.13, 3.14 python version, if you have a > 3.14 version replace python3 by python3.14
 ### On Linux/Mac:
 ```bash
 python3 -m venv venv
@@ -118,9 +120,9 @@ Exports the package's main functions for external use.
 
 ---
 
-## Utilisation
+## Usage
 
-### Exécution simple
+### To execute
 
 ```bash
 python main.py
