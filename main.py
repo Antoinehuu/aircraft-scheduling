@@ -1,4 +1,5 @@
 import os
+import csv
 import time
 
 # Import the modules
@@ -6,6 +7,7 @@ from src.data_loader import load_dat_file
 from src.preprocessing import preprocess_flights
 from src.model import build_and_solve_model
 from src.model import build_and_solve_model_2
+
 
 def solve_instance(filepath):
     """
@@ -46,62 +48,85 @@ def solve_instance(filepath):
     )
     
     # Gurobi parameters
-    model.setParam("OutputFlag", 1)
-    model.setParam("Presolve", 2)
+    model.setParam("OutputFlag", 0)
+    model.setParam("Presolve", 1)
     model.setParam("MIPGap", 0.02)
+    # model.setParam("TimeLimit", 600)
     
     print("▶ Optimization...")
     model.optimize()
     
     model.write("model.lp")
     
-    solve_time = time.perf_counter() - start_time
-    
-    # Statistics
+    # Statistics (captured right after first solve)
     nb_vars = model.NumVars
     nb_constrs = model.NumConstrs
     nb_nonzeros = model.NumNZs
     nb_work = model.Work
     
-    # Gurobi parameters
-    model.setParam("OutputFlag", 1)
-    model.setParam("Presolve", 1)
-    model.setParam("MIPGap", 0.02)   
+    # # Gurobi parameters
+    # model.setParam("OutputFlag", 0)
+    # model.setParam("Presolve", 1)
+    # model.setParam("MIPGap", 0.01)   
+    # model.setParam("TimeLimit", 10)
     
-    # 2nd optimization to reduce maintenances 
-    # and reach a local minimum 
-    model, x, y, z = build_and_solve_model_2(
-        nb_flights, flights, costs, m_costs,
-        aircraft_init, m_airports, Days, data, model, x, y, z
-        )
+    # # 2nd optimization to reduce maintenances 
+    # # and reach a local minimum 
+    # model, x, y, z = build_and_solve_model_2(
+    #     nb_flights, flights, costs, m_costs,
+    #     aircraft_init, m_airports, Days, data, model, x, y, z
+    #     )
         
-    model.setParam("Presolve", -1)
-    model.optimize()
+    # model.setParam("Presolve", -1)
+    # model.optimize()
+    
+    solve_time = time.perf_counter() - start_time
+    
+    obj_value = model.ObjVal if model.status == 2 else None
+    mip_gap = model.MIPGap if model.status == 2 else None
     
     results = {
         'filename': os.path.basename(filepath),
         'nb_flights': nb_flights,
         'nb_aircrafts': nb_aircrafts,
+        'horizon': horizon,
         'nb_vars': nb_vars,
         'nb_constrs': nb_constrs,
         'nb_nonzeros': nb_nonzeros,
-        'solve_time': solve_time,
-        'work_units': nb_work,
-        'obj_value': model.ObjVal if model.status == 2 else None,
-        'status': model.status
+        'solve_time': round(solve_time, 2),
+        'work_units': round(nb_work, 2),
+        'obj_value': round(obj_value, 2) if obj_value is not None else None,
+        'mip_gap': round(mip_gap, 4) if mip_gap is not None else None,
+        'status': model.status,
     }
     
-    # Display results
-    print(f"\n▶ Results:")
-    print(f"  Status: {'Optimal' if model.status == 2 else 'Suboptimal/Infeasible'}")
-    print(f"  Objective: {results['obj_value']:.2f}" if results['obj_value'] else "  Objective: N/A")
-    print(f"  Time: {solve_time:.3f}s")
-    print(f"  Gurobi work: {nb_work:.3f} units")
-    print(f"  Variables: {nb_vars}")
-    print(f"  Constraints: {nb_constrs}")
-    print(f"  Non-zeros: {nb_nonzeros}")
+    # Short progress print (no full summary)
+    status_str = 'Optimal' if model.status == 2 else f'status={model.status}'
+    obj_str = f"{obj_value:.2f}" if obj_value is not None else "N/A"
+    print(f"  → {status_str} | obj={obj_str} | time={solve_time:.3f}s")
     
     return results
+
+
+def write_results_csv(results, csv_path):
+    """Append one instance result to the CSV file."""
+    if not results:
+        print("No results to write.")
+        return
+
+    fieldnames = list(results.keys())
+
+    file_exists = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
+
+    with open(csv_path, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+
+        if not file_exists:
+            writer.writeheader()
+
+        writer.writerow(results)
+
+    print(f"Result appended to: {csv_path}")
 
 
 def main():
@@ -113,44 +138,35 @@ def main():
     
     # Files to process
     folder = "data_with_maintenance_constraints/d=4"
-    
+    # folder = "data/d=0.9"
+
     # Option 1: A specific file
-    paths = ["data_with_maintenance_constraints/d=4/DataCplex_density=1_p=10_h=15_test_0.dat"]
+    # paths = ["data_with_maintenance_constraints/d=4/DataCplex_density=1_p=10_h=15_test_0.dat"]
     
     # Option 2: All files in a folder
-    #paths = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".dat")]
+    paths = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".dat")]
     
     paths.sort()
-    
-    # Solve all files
-    all_results = []
     
     for path in paths:
         try:
             results = solve_instance(path)
-            
-            all_results.append(results)
         except Exception as e:
-            print(f"❌ Error for {os.path.basename(path)}: {e}")
+            print(f"Error for {os.path.basename(path)}: {e}")
             import traceback
             traceback.print_exc()
-    
-    # Final summary
-    print(f"\n{'='*70}")
-    print("FINAL SUMMARY")
-    print(f"{'='*70}")
-    
-    for res in all_results:
-        print(f"\n{res['filename']}")
-        print(f"  Flights: {res['nb_flights']}, Aircraft: {res['nb_aircrafts']}")
-        print(f"  Time: {res['solve_time']:.3f}s | Work: {res['work_units']:.3f} | "
-              f"Vars: {res['nb_vars']} | Constrs: {res['nb_constrs']}")
-        if res['obj_value']:
-            print(f"  Objective: {res['obj_value']:.2f}")
+            # Optionally record failures too:
+            results = {
+                'filename': os.path.basename(path),
+                'nb_flights': None, 'nb_aircrafts': None, 'horizon': None,
+                'nb_vars': None, 'nb_constrs': None, 'nb_nonzeros': None,
+                'solve_time': None, 'work_units': None,
+                'obj_value': None, 'mip_gap': None,
+                'status': f'ERROR: {e}',
+            }
+        write_results_csv(results, "results_maintenance.csv")
     
     print(f"\n{'='*70}\n")
-    
-    return all_results
 
 
 if __name__ == "__main__":
