@@ -86,8 +86,9 @@ projet/
 
 **Usage:**
 ```bash
-python main.py
-‘‘‘
+python -m src.gurobi.main
+python -m src.or_tools.main
+```
 
 ### `src/data_loader.py`
 
