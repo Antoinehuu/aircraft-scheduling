@@ -1,12 +1,17 @@
-# src/model.py
+# src/or_tools/model.py
 """
-OR-Tools (CP-SAT) port of the aircraft scheduling optimization model.
+OR-Tools (CP-SAT) implementation of the aircraft scheduling model.
 
-Mirrors build_and_solve_model / build_and_solve_model_2 from the Gurobi version:
-  - x[f,t] : flight f is assigned to aircraft t
-  - y[d,t] : aircraft t has a maintenance on day d (d may be fictitious, < 0)
-  - z[f,t] : flight f is the last flight of the day that positions aircraft t
-             at a maintenance airport (i.e. triggers maintenance)
+Public entry points:
+    build_and_solve(...)                   -> dispatcher (CP-SAT)
+    build_and_solve_model(...)             -> fleet assignment only (no maintenance)
+    build_and_solve_maintenance_model(...) -> fleet assignment + maintenance
+    build_and_solve_model_2(...)           -> phase 2 (maintenance model only)
+
+All model builders return (model, x, y, z) except the dispatcher, which also
+returns the solver:
+    dispatcher: (model, x, y, z, solver)
+    builders:   (model, x, y, z)
 """
 
 import bisect
@@ -19,22 +24,104 @@ def _int_cost(c):
     return int(round(c * 1000))
 
 
-def build_and_solve_model_ortools(
-    nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
-    aircraft_init, airports, m_airports, Days, data,
-    time_limit_seconds=300.0, num_workers=8, log_search_progress=True,
-):
+# ===========================================================================
+# Dispatcher
+# ===========================================================================
+
+def build_and_solve(nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+                    aircraft_init, airports, m_airports, Days, data,
+                    is_maintenance_instance,
+                    time_limit_seconds=600.0, num_workers=8, log_search_progress=True):
     """
-    Builds the CP-SAT model.
+    Dispatch to the maintenance or no-maintenance CP-SAT model.
 
     Returns:
-        (model, x, y, z, solver, vars_dict)
-        vars_dict holds helper structures needed by the second phase.
+        (model, x, y, z, solver)
+    """
+    if is_maintenance_instance:
+        model, x, y, z = build_and_solve_maintenance_model(
+            nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+            aircraft_init, airports, m_airports, Days, data,
+        )
+    else:
+        model, x, y, z = build_and_solve_model(
+            nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+            aircraft_init, airports, m_airports, Days, data,
+        )
+
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = time_limit_seconds
+    solver.parameters.num_search_workers = num_workers
+    solver.parameters.log_search_progress = log_search_progress
+
+    return model, x, y, z, solver
+
+
+# ===========================================================================
+# No-maintenance model (pure fleet assignment)
+# ===========================================================================
+
+def build_and_solve_model(nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+                          aircraft_init, airports, m_airports, Days, data):
+    """
+    Fleet-assignment CP-SAT model WITHOUT maintenance.
+
+    `cap_maintenance`, `horizon`, `m_costs`, `m_airports`, `Days` are accepted
+    for signature compatibility but not used.
+
+    Returns:
+        (model, x, y, z) with y = {} and z = {}.
     """
     nb_aircrafts = len(aircraft_init)
     Aircraft = list(range(nb_aircrafts))
     Flights_id = list(range(1, nb_flights + 1))
 
+    airports_set = set(data['departures_sorted'].keys())
+
+    model = cp_model.CpModel()
+
+    # ---- variables: x only ----------------------------------------------
+    x = {}
+    for i in Flights_id:
+        for t in Aircraft:
+            x[i, t] = model.NewBoolVar(f"x_{i}_{t}")
+
+    y = {}
+    z = {}
+
+    # ---- shared constraints ---------------------------------------------
+    _add_coverage_constraints(model, Aircraft, Flights_id, x)
+    _add_flow_constraints(model, Aircraft, aircraft_init, data, x, airports_set)
+    _add_base_constraints(model, Aircraft, aircraft_init, data, x)
+    _add_duplicate_constraints(model, Aircraft, flights, x)
+
+    # ---- objective: flight costs only ------------------------------------
+    obj_terms = []
+    for i in Flights_id:
+        for t in Aircraft:
+            obj_terms.append(_int_cost(costs[i - 1][t]) * x[i, t])
+    model.Minimize(sum(obj_terms))
+
+    return model, x, y, z
+
+
+# ===========================================================================
+# Maintenance model
+# ===========================================================================
+
+def build_and_solve_maintenance_model(nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+                                      aircraft_init, airports, m_airports, Days, data):
+    """
+    Fleet-assignment CP-SAT model WITH maintenance constraints.
+
+    Returns:
+        (model, x, y, z) — all three variable dicts populated.
+    """
+    nb_aircrafts = len(aircraft_init)
+    Aircraft = list(range(nb_aircrafts))
+    Flights_id = list(range(1, nb_flights + 1))
+
+    # ---- mappings --------------------------------------------------------
     m_Flights_id = {f['id']: f['dest'] for f in flights if f['dest'] in m_airports}
     flight_day = {i['id']: i['day'] for i in flights}
 
@@ -54,9 +141,10 @@ def build_and_solve_model_ortools(
     ap_to_id = {ap: idx for idx, ap in enumerate(m_airports)}
     airports_set = set(data['departures_sorted'].keys())
 
-    # --- model -------------------------------------------------------------
+    # ---- model -----------------------------------------------------------
     model = cp_model.CpModel()
 
+    # ---- variables -------------------------------------------------------
     x = {}
     for i in Flights_id:
         for t in Aircraft:
@@ -72,27 +160,20 @@ def build_and_solve_model_ortools(
         for t in Aircraft:
             z[i, t] = model.NewBoolVar(f"z_{i}_{t}")
 
-    # --- C1 coverage -------------------------------------------------------
-    for i in Flights_id:
-        model.AddExactlyOne(x[i, t] for t in Aircraft)
-
-    # --- C2 flow (excluding base) ------------------------------------------
+    # ---- shared constraints ---------------------------------------------
+    _add_coverage_constraints(model, Aircraft, Flights_id, x)
     _add_flow_constraints(model, Aircraft, aircraft_init, data, x, airports_set)
-
-    # --- C3 flow (base) ----------------------------------------------------
     _add_base_constraints(model, Aircraft, aircraft_init, data, x)
-
-    # --- C4 duplicates -----------------------------------------------------
     _add_duplicate_constraints(model, Aircraft, flights, x)
 
-    # --- maintenance constraints -------------------------------------------
+    # ---- maintenance constraints ----------------------------------------
     _add_maintenance_constraints(
         model, Aircraft, Days, Days_fictive, tot_days, horizon,
         Flights_id, flights, flights_by_day, flights_by_origin_day,
         m_airports, cap_maintenance, x, y, z,
     )
 
-    # --- objective ---------------------------------------------------------
+    # ---- objective: flight costs + maintenance positioning costs --------
     cost_it = {
         (i, t): m_costs[t][ap_to_id[data['flight_destination'][i]]]
         for i in m_Flights_id for t in Aircraft
@@ -107,17 +188,18 @@ def build_and_solve_model_ortools(
             obj_terms.append(_int_cost(cost_it[i, t]) * z[i, t])
     model.Minimize(sum(obj_terms))
 
-    solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = time_limit_seconds
-    solver.parameters.num_search_workers = num_workers
-    solver.parameters.log_search_progress = log_search_progress
-
-    return model, x, y, z, solver
+    return model, x, y, z
 
 
-# ---------------------------------------------------------------------------
-# Constraint helpers (1:1 with the Gurobi version)
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# Shared constraint helpers
+# ===========================================================================
+
+def _add_coverage_constraints(model, Aircraft, Flights_id, x):
+    """C1 — every flight is assigned exactly once."""
+    for i in Flights_id:
+        model.AddExactlyOne(x[i, t] for t in Aircraft)
+
 
 def _add_flow_constraints(model, Aircraft, aircraft_init, data, x, airports_set):
     """C2 — flow constraints excluding the base airport."""
@@ -140,8 +222,6 @@ def _add_flow_constraints(model, Aircraft, aircraft_init, data, x, airports_set)
                 idx_departures = bisect.bisect_left(departure_times, target_time)
                 departures_fids = departures[:idx_departures]
 
-                # sum_arrivals - sum_departures >= x[target]
-                # <=> sum_arrivals - sum_departures - x[target] >= 0
                 expr = (
                     sum(x[f, t] for f in arrivals_fids)
                     - sum(x[f, t] for f in departures_fids)
@@ -168,7 +248,6 @@ def _add_base_constraints(model, Aircraft, aircraft_init, data, x):
             idx_departures = bisect.bisect_left(departure_times, target_time)
             departures_fids = departures[:idx_departures]
 
-            # sum_arrivals - sum_departures >= x[target] - 1
             expr = (
                 sum(x[f, t] for f in arrivals_fids)
                 - sum(x[f, t] for f in departures_fids)
@@ -249,31 +328,33 @@ def _add_maintenance_constraints(
             model.Add(sum(trigger) <= cap_maintenance)
 
 
-# ---------------------------------------------------------------------------
-# Phase 2 — locally remove excess maintenances
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# Phase 2 — locally remove excess maintenances (maintenance model only)
+# ===========================================================================
 
-def build_and_solve_model_ortools_2(
+def build_and_solve_model_2(
     nb_flights, flights, costs, m_costs,
     aircraft_init, m_airports, Days, data,
     first_solution_x, first_obj,
+    time_limit_seconds=120.0, num_workers=8, log_search_progress=True,
 ):
     """
     Phase 2: fix the flight→aircraft assignment from phase 1, then minimize
-    the number of maintenance days (same spirit as the Gurobi version).
+    the number of maintenance days.
 
-    `first_solution_x` is a dict {(i,t): 0/1} extracted from the CP-SAT solver.
+    `first_solution_x` is a dict {(i,t): 0/1} extracted from the solver.
+
+    Returns:
+        (model, x, y, z, solver)
     """
     nb_aircrafts = len(aircraft_init)
     Aircraft = list(range(nb_aircrafts))
     Flights_id = list(range(1, nb_flights + 1))
 
     m_Flights_id = {f['id']: f['dest'] for f in flights if f['dest'] in m_airports}
-    ap_to_id = {ap: idx for idx, ap in enumerate(m_airports)}
 
     model = cp_model.CpModel()
 
-    # Re-declare variables
     x = {}
     for i in Flights_id:
         for t in Aircraft:
@@ -286,9 +367,6 @@ def build_and_solve_model_ortools_2(
         for k in m_airports for d in Days
     }
 
-    Days_fictive = list(range(-len(Days) - 1, 1))  # enough room
-    # We don't know `horizon` here; caller passes it implicitly through Days.
-    # For phase 2 we only need y over real Days (fictitious days are frozen).
     y_real = {}
     for d in Days:
         for t in Aircraft:
@@ -304,12 +382,12 @@ def build_and_solve_model_ortools_2(
         for t in Aircraft:
             model.Add(x[i, t] == first_solution_x.get((i, t), 0))
 
-    # z <= x  (redundant with fixed x but keeps z defined)
+    # z <= x
     for i in Flights_id:
         for t in Aircraft:
             model.Add(x[i, t] >= z[i, t])
 
-    # last-flight logic (same as phase 1, restricted to real days)
+    # last-flight logic (restricted to real days)
     flight_departure = {i['id']: i['departure'] for i in flights}
     flight_arrival = {i['id']: i['arrival'] for i in flights}
     for t in Aircraft:
@@ -333,8 +411,8 @@ def build_and_solve_model_ortools_2(
     model.Minimize(sum(y_real[d, t] for d in Days for t in Aircraft))
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 120.0
-    solver.parameters.num_search_workers = 8
-    solver.parameters.log_search_progress = True
+    solver.parameters.max_time_in_seconds = time_limit_seconds
+    solver.parameters.num_search_workers = num_workers
+    solver.parameters.log_search_progress = log_search_progress
 
     return model, x, y_real, z, solver
