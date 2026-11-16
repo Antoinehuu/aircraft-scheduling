@@ -46,7 +46,7 @@ def solve_instance(filepath):
     print(f"  ✓ {nb_flights} flights, {nb_aircrafts} aircraft, horizon={horizon}")
 
     print("▶ Preprocessing data...")
-    data = preprocess_flights(flights, set(range(nb_aircrafts)), aircraft_init, m_airports)
+    data = preprocess_flights(flights, set(range(nb_aircrafts)), aircraft_init)
     print("  ✓ Preprocessing completed")
 
     print("▶ Building the model (OR-Tools CP-SAT)...")
