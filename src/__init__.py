@@ -6,7 +6,7 @@ from .data_loader import load_dat_file
 from .preprocessing import preprocess_flights, find_compatible_flights
 
 __all__ = [
-    'load_dat_file',
+    'load_dat_file_maintenance',
     'preprocess_flights',
     'find_compatible_flights',
 ]

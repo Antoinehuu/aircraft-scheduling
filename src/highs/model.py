@@ -2,8 +2,15 @@
 """
 HiGHS (highspy) implementation of the aircraft scheduling model.
 
-Mirrors the Gurobi build_and_solve_model: same arguments, same return shape.
-Only the modelling primitives change (addVariable / addConstr / changeColsIntegrality).
+Two entry points, sharing the same constraint helpers:
+
+    build_and_solve_model(...)              -> fleet assignment only
+    build_and_solve_maintenance_model(...)  -> fleet assignment + maintenance
+
+Both return (h, x, y, z):
+    x : dict {(flight, aircraft): col_index}   (always populated)
+    y : dict {(day,    aircraft): col_index}   (empty in the no-maintenance model)
+    z : dict {(flight, aircraft): col_index}   (empty in the no-maintenance model)
 """
 
 import bisect
@@ -18,22 +25,79 @@ import highspy
 #   z columns : offset_z .. offset_z + nb_flights*nb_aircrafts - 1
 
 
+def build_and_solve(
+            nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+            aircraft_init, airports, m_airports, Days, data, maintenance=True
+            ):
+    if maintenance==True:
+        return build_and_solve_maintenance_model(
+                nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+                aircraft_init, airports, m_airports, Days, data, )
+    return build_and_solve_model(
+            nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+            aircraft_init, airports, m_airports, Days, data, 
+            )
+
+        
 def build_and_solve_model(
-    nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
-    aircraft_init, airports, m_airports, Days, data,
-):
+            nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+            aircraft_init, airports, m_airports, Days, data,
+        ):
     """
-    Builds the HiGHS model for the aircraft scheduling problem.
+    Fleet-assignment model WITHOUT maintenance.
+
+    `cap_maintenance`, `horizon`, `m_costs`, `m_airports`, `Days` are accepted
+    for signature compatibility with the maintenance model but not used.
 
     Returns:
-        (h, x, y, z) where h is the highspy.Highs instance and x, y, z are
-        dicts mapping (index, aircraft) -> column index in the HiGHS model.
+        (h, x, y, z) with y = {} and z = {}.
     """
     nb_aircrafts = len(aircraft_init)
     Aircraft = list(range(nb_aircrafts))
     Flights_id = list(range(1, nb_flights + 1))
 
-    # ---- useful mappings (identical to Gurobi version) -------------------
+    airports_set = set(data['departures_sorted'].keys())
+
+    h = highspy.Highs()
+
+    # ---- variables: x only ----------------------------------------------
+    x = {}
+    for i in Flights_id:
+        for t in Aircraft:
+            x[i, t] = h.addVariable(
+                lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger
+            )
+
+    y = {}
+    z = {}
+
+    # ---- constraints -----------------------------------------------------
+    _add_coverage_constraints(h, Aircraft, Flights_id, x)
+    _add_flow_constraints(h, Aircraft, aircraft_init, data, x, airports_set)
+    _add_base_constraints(h, Aircraft, aircraft_init, data, x)
+    _add_duplicate_constraints(h, Aircraft, flights, x)
+
+    # ---- objective: flight costs only ------------------------------------
+    _set_flight_costs_objective(h, Flights_id, Aircraft, costs, x)
+
+    return h, x, y, z
+
+
+def build_and_solve_maintenance_model(
+    nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+    aircraft_init, airports, m_airports, Days, data,
+):
+    """
+    Fleet-assignment model WITH maintenance constraints.
+
+    Returns:
+        (h, x, y, z) — all three variable dicts populated.
+    """
+    nb_aircrafts = len(aircraft_init)
+    Aircraft = list(range(nb_aircrafts))
+    Flights_id = list(range(1, nb_flights + 1))
+
+    # ---- mappings --------------------------------------------------------
     m_Flights_id = {f['id']: f['dest'] for f in flights if f['dest'] in m_airports}
     flight_day = {i['id']: i['day'] for i in flights}
 
@@ -56,85 +120,72 @@ def build_and_solve_model(
     # ---- HiGHS instance --------------------------------------------------
     h = highspy.Highs()
 
-    # ---- variable layout -------------------------------------------------
-    # We will add all variables first (with bounds and integrality),
-    # then add constraints by column indices.
-
-    # x : binary, one per (flight, aircraft)
+    # ---- variables -------------------------------------------------------
     x = {}
     for i in Flights_id:
         for t in Aircraft:
-            idx = h.addVariable(lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger)
-            x[i, t] = idx
+            x[i, t] = h.addVariable(
+                lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger
+            )
 
-    # y : binary, one per (day, aircraft) for fictitious + real days
     y = {}
     for d in tot_days:
         for t in Aircraft:
-            idx = h.addVariable(lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger)
-            y[d, t] = idx
+            y[d, t] = h.addVariable(
+                lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger
+            )
 
-    # z : binary, one per (flight, aircraft)
     z = {}
     for i in Flights_id:
         for t in Aircraft:
-            idx = h.addVariable(lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger)
-            z[i, t] = idx
+            z[i, t] = h.addVariable(
+                lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger
+            )
 
-    # ---- C1 coverage -----------------------------------------------------
-    # sum_t x[i,t] == 1  for each flight i
-    for i in Flights_id:
-        h.addConstr(
-            sum(x[i, t] for t in Aircraft) == 1,
-            name=f"coverage_{i}",
-        )
-
-    # ---- C2 flow (excluding base) ----------------------------------------
+    # ---- shared constraints ---------------------------------------------
+    _add_coverage_constraints(h, Aircraft, Flights_id, x)
     _add_flow_constraints(h, Aircraft, aircraft_init, data, x, airports_set)
-
-    # ---- C3 flow (base) --------------------------------------------------
     _add_base_constraints(h, Aircraft, aircraft_init, data, x)
-
-    # ---- C4 duplicates ---------------------------------------------------
     _add_duplicate_constraints(h, Aircraft, flights, x)
 
-    # ---- maintenance constraints -----------------------------------------
+    # ---- maintenance constraints ----------------------------------------
     _add_maintenance_constraints(
         h, Aircraft, Days, Days_fictive, tot_days, horizon,
         Flights_id, flights, flights_by_day, flights_by_origin_day,
         m_airports, cap_maintenance, x, y, z,
     )
 
-    # ---- objective -------------------------------------------------------
+    # ---- objective: flight costs + maintenance positioning costs --------
     cost_it = {
         (i, t): m_costs[t][ap_to_id[data['flight_destination'][i]]]
         for i in m_Flights_id for t in Aircraft
     }
 
-    # Build objective coefficient vector (length = number of variables)
-    num_vars = h.getNumCol()
-    obj = [0.0] * num_vars
-
+    obj = [0.0] * h.getNumCol()
     for i in Flights_id:
         for t in Aircraft:
             obj[x[i, t]] = costs[i - 1][t]
-
     for i in m_Flights_id:
         for t in Aircraft:
             obj[z[i, t]] = cost_it[i, t]
 
-    # Apply objective coefficients and minimisation sense
-    for col, coef in enumerate(obj):
-        if coef != 0.0:
-            h.changeColCost(col, coef)
-    h.changeObjectiveSense(highspy.ObjSense.kMinimize)
+    _apply_objective(h, obj)
 
     return h, x, y, z
 
 
-# ---------------------------------------------------------------------------
-# Constraint helpers (direct port of the Gurobi version)
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# Shared constraint helpers
+# ===========================================================================
+
+def _add_coverage_constraints(h, Aircraft, Flights_id, x):
+    """C1 — every flight is assigned exactly once."""
+    for i in Flights_id:
+        h.addConstr(
+            sum(x[i, t] for t in Aircraft) == 1,
+            name=f"coverage_{i}",
+        )
+
 
 def _add_flow_constraints(h, Aircraft, aircraft_init, data, x, airports_set):
     """C2 — flow constraints excluding the base airport."""
@@ -157,9 +208,6 @@ def _add_flow_constraints(h, Aircraft, aircraft_init, data, x, airports_set):
                 idx_departures = bisect.bisect_left(departure_times, target_time)
                 departures_fids = departures[:idx_departures]
 
-                # sum_arrivals - sum_departures >= x[target_fid, t]
-                # <=> sum_arrivals - sum_departures - x[target_fid, t] >= 0
-                # HiGHS: addConstr(lower <= expr <= upper)
                 expr = (
                     sum(x[f, t] for f in arrivals_fids)
                     - sum(x[f, t] for f in departures_fids)
@@ -186,8 +234,6 @@ def _add_base_constraints(h, Aircraft, aircraft_init, data, x):
             idx_departures = bisect.bisect_left(departure_times, target_time)
             departures_fids = departures[:idx_departures]
 
-            # sum_arrivals - sum_departures >= x[target_fid, t] - 1
-            # <=> sum_arrivals - sum_departures - x[target_fid, t] >= -1
             expr = (
                 sum(x[f, t] for f in arrivals_fids)
                 - sum(x[f, t] for f in departures_fids)
@@ -283,3 +329,24 @@ def _add_maintenance_constraints(
                     sum(trigger) <= cap_maintenance,
                     name=f"maint_cap_{k}_{d}",
                 )
+
+
+# ===========================================================================
+# Objective helpers
+# ===========================================================================
+
+def _set_flight_costs_objective(h, Flights_id, Aircraft, costs, x):
+    """Objective for the no-maintenance model: sum of flight costs."""
+    obj = [0.0] * h.getNumCol()
+    for i in Flights_id:
+        for t in Aircraft:
+            obj[x[i, t]] = costs[i - 1][t]
+    _apply_objective(h, obj)
+
+
+def _apply_objective(h, obj):
+    """Push a dense coefficient vector to HiGHS and set minimise sense."""
+    for col, coef in enumerate(obj):
+        if coef != 0.0:
+            h.changeColCost(col, coef)
+    h.changeObjectiveSense(highspy.ObjSense.kMinimize)

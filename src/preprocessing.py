@@ -7,7 +7,7 @@ import bisect
 from collections import defaultdict
 
 
-def preprocess_flights(flights, airports, aircraft_init, m_airports):
+def preprocess_flights(flights, airports, aircraft_init):
     """
     Complete data preprocessing to avoid recomputations.
     
@@ -20,7 +20,6 @@ def preprocess_flights(flights, airports, aircraft_init, m_airports):
         flights: List of flights
         airports: Set of airports
         aircraft_init: Dict {aircraft_id: initial_airport}
-        m_airports: Set of maintenance airports
         
     Returns:
         dict: Dictionary with preprocessed data

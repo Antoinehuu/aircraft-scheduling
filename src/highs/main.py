@@ -10,7 +10,7 @@ import time
 
 import highspy
 from src import load_dat_file, preprocess_flights
-from src.highs import build_and_solve_model
+from src.highs import build_and_solve
 
 
 def solve_instance(filepath):
@@ -28,17 +28,18 @@ def solve_instance(filepath):
 
     # ---- preprocess ------------------------------------------------------
     print("▶ Preprocessing data...")
-    data = preprocess_flights(flights, set(range(nb_aircrafts)),
-                              aircraft_init, m_airports)
+    data = preprocess_flights(flights, set(range(nb_aircrafts)), aircraft_init)
     print("  ✓ Preprocessing completed")
 
     # ---- build -----------------------------------------------------------
     print("▶ Building the model (HiGHS)...")
     start_time = time.perf_counter()
 
-    h, x, y, z = build_and_solve_model(
+    is_maintenance_instance = "maintenance" in filepath
+
+    h, x, y, z = build_and_solve(
         nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
-        aircraft_init, airports, m_airports, Days, data,
+        aircraft_init, airports, m_airports, Days, data, is_maintenance_instance
     )
 
     # Solver options (mirror the Gurobi block)
@@ -121,7 +122,8 @@ def main():
     print("TAIL ASSIGNMENT OPTIMIZATION — HiGHS")
     print("="*70)
 
-    folder = "data_with_maintenance_constraints/d=4"
+    # folder = "data_with_maintenance_constraints/d=4"
+    folder = "data/d=0.95"
 
     # Option 1: one file
     # paths = ["data_with_maintenance_constraints/d=4/DataCplex_density=1_p=10_h=15_test_0.dat"]
@@ -129,7 +131,6 @@ def main():
     # Option 2: all files in folder
     paths = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".dat")]
     paths.sort()
-
     for path in paths:
         try:
             results = solve_instance(path)
@@ -145,7 +146,7 @@ def main():
                 'obj_value': None, 'mip_gap': None,
                 'status': f'ERROR: {e}',
             }
-        write_results_csv(results, "results_maintenance_highs.csv")
+        write_results_csv(results, "src/highs/results.csv")
 
     print(f"\n{'='*70}\n")
 
