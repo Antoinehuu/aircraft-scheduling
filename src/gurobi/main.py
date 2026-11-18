@@ -138,7 +138,7 @@ def main():
     print("="*70)
 
     # folder = "data_with_maintenance_constraints/d=4"
-    folder = "data/d=0.9"
+    folder = "data/d=1"
 
     # Option 1: one file
     # paths = ["data_with_maintenance_constraints/d=4/DataCplex_density=1_p=10_h=15_test_0.dat"]

@@ -114,7 +114,7 @@ def main():
     print("="*70)
 
     # folder = "data_with_maintenance_constraints/d=4"
-    folder = "data/d=0.95"
+    folder = "data/d=1"
 
     paths = [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".dat")]
     paths.sort()
