@@ -1,13 +1,11 @@
-[View detailed installation tutorial](installation.md)
+# Aircraft-scheduling 
 
-# Aircraft-scheduling installation tutorial
-
-This Tail assignment project solves a task assignment problem for each aircraft as part of an ongoing operations research project at CentraleSupélec.
+This Tail assignment project solves a tail assignment problem for each aircraft as part of an ongoing operations research project at CentraleSupélec.
 
 
 
 # Projet Structure - Aircraft Scheduling
-
+[View detailed installation tutorial](installation.md)
 
 ```
 projet/
