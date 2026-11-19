@@ -1,105 +1,80 @@
 """Run Hexaly on one .dat instance or a directory of instances."""
 
-import argparse
-import csv
 import math
-import time
 from pathlib import Path
+from time import perf_counter
 
 from hexaly.optimizer import HxSolutionStatus
 
 from src import load_dat_file, preprocess_flights
 from src.hexaly import build_and_solve
+from src.hexaly.model import prepare_maintenance_refinement
+from src.solver_cli import results_for, run_batch
 
 
-CSV_FIELDS = (
-    "filename", "nb_flights", "nb_aircrafts", "horizon", "nb_vars",
-    "nb_constrs", "nb_nonzeros", "solve_time", "work_units", "obj_value",
-    "mip_gap", "status",
-)
+_FEASIBLE = (HxSolutionStatus.FEASIBLE, HxSolutionStatus.OPTIMAL)
 
 
 def solve_instance(filepath, time_limit=600):
     filepath = str(filepath)
     instance = load_dat_file(filepath)
-    nb_flights, _, horizon, flights, _, _, aircraft_init, _, _, _ = instance
-    nb_aircrafts = len(aircraft_init)
-    data = preprocess_flights(flights, set(range(nb_aircrafts)), aircraft_init)
-
-    start = time.perf_counter()
-    optimizer, _, _, _ = build_and_solve(*instance, data, "maintenance" in filepath)
+    data = preprocess_flights(instance[3], instance[7], instance[6])
+    maintenance = "maintenance" in filepath
+    start = perf_counter()
+    optimizer, x, y, _ = build_and_solve(*instance, data, maintenance)
     with optimizer:
         model = optimizer.model
         model.close()
         optimizer.param.verbosity = 0
-        optimizer.param.time_limit = time_limit
         optimizer.param.set_gap_limit(0.02)
+        deadline = perf_counter() + time_limit
+        seed_seconds = min(10, int(time_limit / 5))
+        if maintenance and seed_seconds:
+            _seed_maintenance_solve(optimizer, x, instance, data, seed_seconds)
+        optimizer.param.time_limit = max(1, int(deadline - perf_counter() + 0.001))
         optimizer.solve()
-        solve_time = time.perf_counter() - start
 
+        counts = model.nb_decisions, model.nb_constraints, None
         solution = optimizer.solution
-        status = solution.status
-        obj_value = gap = None
-        if status in (HxSolutionStatus.FEASIBLE, HxSolutionStatus.OPTIMAL):
-            obj_value = round(model.get_objective(0).value, 2)
-            objective_gap = solution.get_objective_gap(0)
-            if math.isfinite(objective_gap):
-                gap = round(objective_gap, 4)
-
-        return {
-            "filename": Path(filepath).name,
-            "nb_flights": nb_flights,
-            "nb_aircrafts": nb_aircrafts,
-            "horizon": horizon,
-            "nb_vars": model.nb_decisions,
-            "nb_constrs": model.nb_constraints,
-            "nb_nonzeros": None,
-            "solve_time": round(solve_time, 2),
-            "work_units": None,
-            "obj_value": obj_value,
-            "mip_gap": gap,
-            "status": status.name,
-        }
+        status = solution.status.name
+        cost = gap = None
+        if solution.status in _FEASIBLE:
+            cost = model.get_objective(0).value
+            bound = solution.get_objective_bound(0)
+            gap = solution.get_objective_gap(0)
+            if not math.isfinite(gap):
+                gap = None
+            if maintenance and deadline - perf_counter() >= 1:
+                original_cost = prepare_maintenance_refinement(optimizer, x, y, instance[9])
+                optimizer.param.set_gap_limit(0)
+                optimizer.param.time_limit = max(1, int(deadline - perf_counter()))
+                optimizer.solve()
+                if optimizer.solution.status in _FEASIBLE:
+                    visits = model.get_objective(0).value
+                    print(f"Maintenance refinement | {optimizer.solution.status.name} | visits={visits:.0f}")
+                    if original_cost.value < cost:
+                        cost = original_cost.value
+                        gap = abs(cost - bound) / max(1, abs(cost), abs(bound)) if math.isfinite(bound) else None
+        return results_for(filepath, instance, counts, start, status, cost, gap)
 
 
-def write_results_csv(results, csv_path):
-    with open(csv_path, "a", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=CSV_FIELDS)
-        if file.tell() == 0:
-            writer.writeheader()
-        writer.writerow(results)
+def _seed_maintenance_solve(optimizer, x, instance, data, time_limit):
+    fleet, fleet_x, _, _ = build_and_solve(*instance, data, False)
+    with fleet:
+        fleet.model.close()
+        fleet.param.verbosity = 0
+        fleet.param.time_limit = time_limit
+        fleet.param.set_gap_limit(0.02)
+        fleet.solve()
+        if fleet.solution.status in _FEASIBLE:
+            solution = optimizer.solution
+            for key, var in x.items():
+                if var.is_decision():
+                    solution.set_value(var, fleet_x[key].value)
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", type=Path, nargs="?", default=Path("data/d=0.9"))
-    parser.add_argument("--output", type=Path, default=Path(__file__).with_name("results.csv"))
-    parser.add_argument("--time-limit", type=int, default=600, help="seconds per instance")
-    args = parser.parse_args()
-    if args.time_limit <= 0:
-        parser.error("--time-limit must be positive")
-    if args.input.is_dir():
-        paths = sorted(path for path in args.input.glob("*.dat") if path.is_file())
-    else:
-        paths = [args.input] if args.input.is_file() and args.input.suffix == ".dat" else []
-    if not paths:
-        parser.error(f"No .dat instances found at {args.input}")
-
-    failed = False
-    for path in paths:
-        try:
-            results = solve_instance(path, args.time_limit)
-        except Exception as exc:
-            failed = True
-            results = {"filename": path.name, "status": f"ERROR: {exc}"}
-            print(f"{path.name} | {results['status']}")
-        else:
-            print(f"{path.name} | {results['status']} | "
-                  f"obj={results['obj_value']} | gap={results['mip_gap']} | "
-                  f"time={results['solve_time']}s")
-        write_results_csv(results, args.output)
-    print(f"Results appended to {args.output}")
-    return int(failed)
+    return run_batch(solve_instance, "data/d=0.9", Path(__file__).with_name("results.csv"), __doc__)
 
 
 if __name__ == "__main__":
