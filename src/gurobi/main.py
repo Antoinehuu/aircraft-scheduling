@@ -85,7 +85,7 @@ def _gurobi_status_name(status_code):
 
 
 def main():
-    return run_batch(solve_instance, "data/d=0.9", Path(__file__).with_name("results.csv"), __doc__)
+    return run_batch(solve_instance, "data/d=0.9", Path(__file__).parent, __doc__)
 
 
 if __name__ == "__main__":

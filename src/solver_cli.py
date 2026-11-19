@@ -30,10 +30,15 @@ def write_results_csv(results, csv_path):
         writer.writerow(results)
 
 
-def run_batch(solve_instance, default_input, output, description):
+def default_results_path(input_path, output_dir):
+    filename = "results_maintenance.csv" if "maintenance" in str(input_path) else "results.csv"
+    return output_dir / filename
+
+
+def run_batch(solve_instance, default_input, output_dir, description):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("input", type=Path, nargs="?", default=Path(default_input))
-    parser.add_argument("--output", type=Path, default=output)
+    parser.add_argument("--output", type=Path, help="override the solver's default results CSV")
     parser.add_argument("--time-limit", type=int, default=600, help="solver seconds per instance")
     args = parser.parse_args()
     if args.time_limit <= 0:
@@ -44,6 +49,7 @@ def run_batch(solve_instance, default_input, output, description):
         paths = [args.input] if args.input.is_file() and args.input.suffix == ".dat" else []
     if not paths:
         parser.error(f"No .dat instances found at {args.input}")
+    output = args.output or default_results_path(args.input, output_dir)
 
     failed = False
     for path in paths:
@@ -57,6 +63,6 @@ def run_batch(solve_instance, default_input, output, description):
             print(f"{path.name} | {results['status']} | "
                   f"obj={results['obj_value']} | gap={results['mip_gap']} | "
                   f"time={results['solve_time']}s")
-        write_results_csv(results, args.output)
-    print(f"Results appended to {args.output}")
+        write_results_csv(results, output)
+    print(f"Results appended to {output}")
     return int(failed)

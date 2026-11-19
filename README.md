@@ -66,15 +66,18 @@ of each route. [Fleet-assignment report](results/Rapport_project_no_maintenances
 ### Maintenance scheduling
 
 ```bash
-python -m src.gurobi.main data_with_maintenance_constraints/d=4 --output /tmp/gurobi-maintenance.csv
-python -m src.highs.main data_with_maintenance_constraints/d=4 --output /tmp/highs-maintenance.csv
-python -m src.or_tools.main data_with_maintenance_constraints/d=4 --output /tmp/or-tools-maintenance.csv
-python -m src.hexaly.main data_with_maintenance_constraints/d=4 --output /tmp/hexaly-maintenance.csv
+python -m src.gurobi.main data_with_maintenance_constraints/d=4
+python -m src.highs.main data_with_maintenance_constraints/d=4
+python -m src.or_tools.main data_with_maintenance_constraints/d=4
+python -m src.hexaly.main data_with_maintenance_constraints/d=4
 ```
 
-Each runner accepts a directory or a single `.dat` file. Maintenance uses the
-airport where the aircraft lands after its last flight of the day. A rolling
-window controls when maintenance is due. The inputs have no initial maintenance
+Each runner accepts a directory or a single `.dat` file. Input paths containing
+`maintenance` write to `src/<solver>/results_maintenance.csv` by default.
+Other runs write to `src/<solver>/results.csv`. Use `--output` to set a different path.
+
+Maintenance uses the airport where the aircraft lands after its last flight
+of the day. A rolling window controls when maintenance is due. The inputs have no initial maintenance
 history, so all four backends use the same reproducible sample by default.
 Programmatic callers can pass `initial_maintenance_days` to supply the last
 maintenance day for each aircraft.

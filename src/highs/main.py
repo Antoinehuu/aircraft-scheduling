@@ -15,6 +15,7 @@ import highspy
 from src import load_dat_file, preprocess_flights
 from src.highs import build_and_solve
 from src.highs.model import minimize_maintenance_visits
+from src.solver_cli import default_results_path
 
 
 def solve_instance(filepath, time_limit=600.0):
@@ -156,7 +157,7 @@ def write_results_csv(results, csv_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, nargs="?", default=Path("data/d=0.95"))
-    parser.add_argument("--output", type=Path)
+    parser.add_argument("--output", type=Path, help="override the solver's default results CSV")
     parser.add_argument("--time-limit", type=float, default=600.0, help="solver seconds per instance")
     args = parser.parse_args()
     if not math.isfinite(args.time_limit) or args.time_limit <= 0:
@@ -167,8 +168,7 @@ def main():
         paths = [args.input] if args.input.is_file() and args.input.suffix == ".dat" else []
     if not paths:
         parser.error(f"No .dat instances found at {args.input}")
-    results_name = "results_maintenance.csv" if "maintenance" in str(args.input) else "results.csv"
-    output = args.output or Path("src/highs") / results_name
+    output = args.output or default_results_path(args.input, Path(__file__).parent)
 
     print("\n" + "="*70)
     print("TAIL ASSIGNMENT OPTIMIZATION — HiGHS")

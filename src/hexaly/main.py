@@ -74,7 +74,7 @@ def _seed_maintenance_solve(optimizer, x, instance, data, time_limit):
 
 
 def main():
-    return run_batch(solve_instance, "data/d=0.9", Path(__file__).with_name("results.csv"), __doc__)
+    return run_batch(solve_instance, "data/d=0.9", Path(__file__).parent, __doc__)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
-filename,nb_flights,nb_aircrafts,horizon,nb_vars,nb_constrs,nb_nonzeros,solve_time,work_units,obj_value_final,mip_gap_final,statusDataCplex_density=1_p=10_h=15_test_0.dat,408,10,8,8390,45903,278010,13.38,30.53,,,11
+filename,nb_flights,nb_aircrafts,horizon,nb_vars,nb_constrs,nb_nonzeros,solve_time,work_units,obj_value,mip_gap,status
+DataCplex_density=1_p=10_h=15_test_0.dat,408,10,8,8390,45903,278010,13.38,30.53,,,11
 
 DataCplex_density=1_p=10_h=15_test_0.dat,408,10,8,8390,45903,278010,18.81,46.61,3440416.0,0.0197,2
 DataCplex_density=1_p=10_h=15_test_1.dat,425,10,8,8730,50670,295870,45.51,122.21,3554084.0,0.0197,2
