@@ -1,6 +1,4 @@
----
-title: Installation Tutorial
----
+# Installation Tutorial
 
 ## Clone the project
 
