@@ -20,6 +20,7 @@ projet/
 |   |
 │   ├── highs/
 │   ├── or_tools/
+│   ├── hexaly/
 │   ├── preprocessing.py      
 │   └── data_loader.py
 │
@@ -47,6 +48,8 @@ projet/
 python -m src.gurobi.main
 python -m src.highs.main
 python -m src.or_tools.main
+python -m src.hexaly.main
+python -m src.hexaly.main data/d=0.9 --output src/hexaly/results.csv
 ```
 
 ### `src/data_loader.py`

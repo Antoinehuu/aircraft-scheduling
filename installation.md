@@ -2,7 +2,7 @@
 title: Installation Tutorial
 ---
 
-## 1. Clone the project
+## Clone the project
 
 ```bash
 git clone https://github.com/antoinehuu/aircraft-scheduling.git
@@ -11,7 +11,7 @@ cd aircraft-scheduling
 
 ---
 
-## 2. Create a virtual environment
+## Create a virtual environment
 
 Gurobi only support 3.10, 3.11, 3.12, 3.13, 3.14 python version, if you have a > 3.14 version replace python3 by python3.14
 ### On Linux/Mac:
@@ -28,7 +28,7 @@ venv\Scripts\activate
 
 ---
 
-## 3. Install modules
+### Gurobi
 
 Requires a Gurobi license; there is a tutorial for an academic license at the end.
 
@@ -36,17 +36,19 @@ Requires a Gurobi license; there is a tutorial for an academic license at the en
 pip install -r requirements.txt
 ```
 
----
+### Hexaly
 
-## 4. Check if it works
+Install the optional Python package with 
 
 ```bash
-python -c "import gurobipy; print('OK')"
+python -m pip install hexaly
 ```
+
+and configure a Hexaly license. See the [Hexaly setup guide](https://www.hexaly.com/docs/last/installation/pythonsetup.html).
 
 ---
 
-## Academic license installation
+## Gurobi Academic license installation
 
 • Go to the main page of the Gurobi website and log in to your Gurobi account via the Login tab, if
 you are not already logged in.
