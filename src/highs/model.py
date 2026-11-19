@@ -2,7 +2,7 @@
 """
 HiGHS (highspy) implementation of the aircraft scheduling model.
 
-Two entry points, sharing the same constraint helpers:
+Two model builders:
 
     build_and_solve_model(...)              -> fleet assignment only
     build_and_solve_maintenance_model(...)  -> fleet assignment + maintenance
@@ -44,7 +44,7 @@ def build_and_solve_model(
             aircraft_init, airports, m_airports, Days, data,
         ):
     """
-    Fleet-assignment model WITHOUT maintenance.
+    Build one continuous route per aircraft using binary flight assignments.
 
     `cap_maintenance`, `horizon`, `m_costs`, `m_airports`, `Days` are accepted
     for signature compatibility with the maintenance model but not used.
@@ -52,35 +52,85 @@ def build_and_solve_model(
     Returns:
         (h, x, y, z) with y = {} and z = {}.
     """
-    nb_aircrafts = len(aircraft_init)
-    Aircraft = list(range(nb_aircrafts))
-    Flights_id = list(range(1, nb_flights + 1))
-
-    airports_set = set(data['departures_sorted'].keys())
+    aircraft = range(len(aircraft_init))
+    flight_ids = range(1, nb_flights + 1)
+    reachable = _reachable_flights(flights, aircraft_init.values())
+    tail_flights = {t: reachable[aircraft_init[t]] for t in aircraft}
 
     h = highspy.Highs()
+    x = h.addVariables(
+        flight_ids,
+        aircraft,
+        ub=[float(i in tail_flights[t]) for i in flight_ids for t in aircraft],
+        obj=[costs[i - 1][t] for i in flight_ids for t in aircraft],
+        type=highspy.HighsVarType.kInteger,
+        out_array=False,
+    )
+    for i in flight_ids:
+        columns = [x[i, t].index for t in aircraft if i in tail_flights[t]]
+        h.addRow(1.0, 1.0, len(columns), columns, [1.0] * len(columns))
 
-    # ---- variables: x only ----------------------------------------------
-    x = {}
-    for i in Flights_id:
-        for t in Aircraft:
-            x[i, t] = h.addVariable(
-                lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger
-            )
+    # A nonempty route must leave its initial base at least once.
+    for t in aircraft:
+        base_departures = data["departures_sorted"].get(aircraft_init[t], [])
+        columns = [x[i, t].index for i in base_departures]
+        h.addRow(1.0, highspy.kHighsInf, len(columns), columns, [1.0] * len(columns))
 
-    y = {}
-    z = {}
+    _add_fleet_flow_constraints(h, aircraft_init, data, tail_flights, x)
+    return h, x, {}, {}
 
-    # ---- constraints -----------------------------------------------------
-    _add_coverage_constraints(h, Aircraft, Flights_id, x)
-    _add_flow_constraints(h, Aircraft, aircraft_init, data, x, airports_set)
-    _add_base_constraints(h, Aircraft, aircraft_init, data, x)
-    _add_duplicate_constraints(h, Aircraft, flights, x)
 
-    # ---- objective: flight costs only ------------------------------------
-    _set_flight_costs_objective(h, Flights_id, Aircraft, costs, x)
+def _reachable_flights(flights, bases):
+    """Find flights each base can reach when one aircraft travels on its own."""
+    if any(flight["arrival"] <= flight["departure"] for flight in flights):
+        raise ValueError("Fleet assignment requires each flight to arrive after it departs.")
 
-    return h, x, y, z
+    by_departure = sorted(flights, key=lambda flight: flight["departure"])
+    reachable = {}
+    for base in dict.fromkeys(bases):
+        earliest_arrival = {base: float("-inf")}
+        flights_from_base = set()
+        for flight in by_departure:
+            if earliest_arrival.get(flight["origin"], float("inf")) <= flight["departure"]:
+                flights_from_base.add(flight["id"])
+                dest = flight["dest"]
+                earliest_arrival[dest] = min(
+                    flight["arrival"], earliest_arrival.get(dest, float("inf"))
+                )
+        reachable[base] = flights_from_base
+    return reachable
+
+
+def _add_fleet_flow_constraints(h, aircraft_init, data, tail_flights, x):
+    """Bound cumulative departures by cumulative arrivals plus initial stock."""
+    for airport, departures in data["departures_sorted"].items():
+        arrivals = data["arrivals_sorted"].get(airport, [])
+        departure_times = [data["flight_departure_time"][i] for i in departures]
+        arrival_times = [data["flight_arrival_time"][i] for i in arrivals]
+
+        end = 0
+        while end < len(departures):
+            # Arrivals at the same instant are available for the departures.
+            arrived = bisect.bisect_right(arrival_times, departure_times[end])
+            # Between consecutive arrivals, the last departure balance implies
+            # the earlier balances because the departure count only increases.
+            end = (bisect.bisect_left(departure_times, arrival_times[arrived], lo=end)
+                   if arrived < len(arrivals) else len(departures))
+
+            departed_ids = set(departures[:end])
+            arrived_ids = set(arrivals[:arrived])
+            outgoing = sorted(departed_ids - arrived_ids)
+            incoming = sorted(arrived_ids - departed_ids)
+            for t, base in aircraft_init.items():
+                reachable = tail_flights[t]
+                dep_cols = [x[i, t].index for i in outgoing if i in reachable]
+                if not dep_cols:
+                    continue
+                arr_cols = [x[i, t].index for i in incoming if i in reachable]
+                columns = dep_cols + arr_cols
+                coefficients = [1.0] * len(dep_cols) + [-1.0] * len(arr_cols)
+                h.addRow(-highspy.kHighsInf, float(base == airport),
+                         len(columns), columns, coefficients)
 
 
 def build_and_solve_maintenance_model(
@@ -142,7 +192,7 @@ def build_and_solve_maintenance_model(
                 lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger
             )
 
-    # ---- shared constraints ---------------------------------------------
+    # ---- fleet constraints ----------------------------------------------
     _add_coverage_constraints(h, Aircraft, Flights_id, x)
     _add_flow_constraints(h, Aircraft, aircraft_init, data, x, airports_set)
     _add_base_constraints(h, Aircraft, aircraft_init, data, x)
@@ -175,7 +225,7 @@ def build_and_solve_maintenance_model(
 
 
 # ===========================================================================
-# Shared constraint helpers
+# Maintenance constraint helpers
 # ===========================================================================
 
 def _add_coverage_constraints(h, Aircraft, Flights_id, x):
@@ -334,15 +384,6 @@ def _add_maintenance_constraints(
 # ===========================================================================
 # Objective helpers
 # ===========================================================================
-
-def _set_flight_costs_objective(h, Flights_id, Aircraft, costs, x):
-    """Objective for the no-maintenance model: sum of flight costs."""
-    obj = [0.0] * h.getNumCol()
-    for i in Flights_id:
-        for t in Aircraft:
-            obj[x[i, t]] = costs[i - 1][t]
-    _apply_objective(h, obj)
-
 
 def _apply_objective(h, obj):
     """Push a dense coefficient vector to HiGHS and set minimise sense."""

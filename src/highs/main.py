@@ -68,13 +68,10 @@ def solve_instance(filepath):
     model_status = h.getModelStatus()
     status_name = h.modelStatusToString(model_status)
 
-    # Objective and gap are only meaningful if a feasible solution exists
-    # info.objective_function_value is kHighsInf if no feasible solution
     obj_value = None
     gap = None
-    if info.objective_function_value != highspy.kHighsInf:
+    if info.primal_solution_status == highspy.SolutionStatus.kSolutionStatusFeasible:
         obj_value = info.objective_function_value
-        # mip_gap is available in info for MIP models
         gap = info.mip_gap
 
     results = {

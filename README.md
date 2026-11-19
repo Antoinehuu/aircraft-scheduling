@@ -52,6 +52,16 @@ python -m src.hexaly.main
 python -m src.hexaly.main data/d=0.9 --output src/hexaly/results.csv
 ```
 
+### HiGHS fleet assignment
+
+For instances in `data/`, the HiGHS model uses one binary variable
+`x[i, t]` for each flight `i` and aircraft `t`. Coverage assigns each flight
+once. Airport balances group simultaneous departures and make arrivals
+available at their scheduled time. Each aircraft operates a route from its
+initial base and may end at any airport. The total cost includes every flight
+in each route. Equation (12) in the report omits the cost of the final flight
+of each route. [Fleet-assignment report](results/Rapport_project_no_maintenances.pdf)
+
 ### `src/data_loader.py`
 
 Main function:
