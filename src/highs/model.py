@@ -8,41 +8,41 @@ Two model builders:
     build_and_solve_maintenance_model(...)  -> fleet assignment + maintenance
 
 Both return (h, x, y, z):
-    x : dict {(flight, aircraft): col_index}   (always populated)
-    y : dict {(day,    aircraft): col_index}   (empty in the no-maintenance model)
-    z : dict {(flight, aircraft): col_index}   (empty in the no-maintenance model)
+    x : dict {(flight, aircraft): variable}  (always populated)
+    y : dict {(day, aircraft): variable}     (maintenance only)
+    z : dict {(flight, aircraft): variable}  (maintenance only)
 """
 
 import bisect
 import random
+from collections import defaultdict
+from itertools import groupby
+from math import fsum
 
 import highspy
 
-# HiGHS variable indices must be plain ints. We map (i, t) tuples to a column index.
-# We use three separate index spaces packed into one contiguous range:
-#   x columns : offset_x .. offset_x + nb_flights*nb_aircrafts - 1
-#   y columns : offset_y .. offset_y + len(tot_days)*nb_aircrafts - 1
-#   z columns : offset_z .. offset_z + nb_flights*nb_aircrafts - 1
-
 
 def build_and_solve(
-            nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
-            aircraft_init, airports, m_airports, Days, data, maintenance=True
-            ):
-    if maintenance==True:
+    nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+    aircraft_init, airports, m_airports, Days, data, maintenance=True,
+    *, initial_maintenance_days=None,
+):
+    if maintenance:
         return build_and_solve_maintenance_model(
-                nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
-                aircraft_init, airports, m_airports, Days, data, )
-    return build_and_solve_model(
-            nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
-            aircraft_init, airports, m_airports, Days, data, 
-            )
-
-        
-def build_and_solve_model(
             nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
             aircraft_init, airports, m_airports, Days, data,
-        ):
+            initial_maintenance_days=initial_maintenance_days,
+        )
+    return build_and_solve_model(
+        nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+        aircraft_init, airports, m_airports, Days, data,
+    )
+
+
+def build_and_solve_model(
+    nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
+    aircraft_init, airports, m_airports, Days, data,
+):
     """
     Build one continuous route per aircraft using binary flight assignments.
 
@@ -52,6 +52,11 @@ def build_and_solve_model(
     Returns:
         (h, x, y, z) with y = {} and z = {}.
     """
+    h, x, _ = _build_fleet_model(nb_flights, flights, costs, aircraft_init, data)
+    return h, x, {}, {}
+
+
+def _build_fleet_model(nb_flights, flights, costs, aircraft_init, data):
     aircraft = range(len(aircraft_init))
     flight_ids = range(1, nb_flights + 1)
     reachable = _reachable_flights(flights, aircraft_init.values())
@@ -77,7 +82,7 @@ def build_and_solve_model(
         h.addRow(1.0, highspy.kHighsInf, len(columns), columns, [1.0] * len(columns))
 
     _add_fleet_flow_constraints(h, aircraft_init, data, tail_flights, x)
-    return h, x, {}, {}
+    return h, x, tail_flights
 
 
 def _reachable_flights(flights, bases):
@@ -135,259 +140,145 @@ def _add_fleet_flow_constraints(h, aircraft_init, data, tail_flights, x):
 
 def build_and_solve_maintenance_model(
     nb_flights, cap_maintenance, horizon, flights, costs, m_costs,
-    aircraft_init, airports, m_airports, Days, data,
+    aircraft_init, airports, m_airports, Days, data, *, initial_maintenance_days=None,
 ):
+    """Build fleet assignment with maintenance at eligible end-of-day arrivals.
+
+    initial_maintenance_days maps each aircraft to its last maintenance day.
+    When omitted, use a reproducible draw from the pre-schedule days.
     """
-    Fleet-assignment model WITH maintenance constraints.
+    if horizon <= 0:
+        raise ValueError("The maintenance horizon must be positive.")
 
-    Returns:
-        (h, x, y, z) — all three variable dicts populated.
-    """
-    nb_aircrafts = len(aircraft_init)
-    Aircraft = list(range(nb_aircrafts))
-    Flights_id = list(range(1, nb_flights + 1))
+    aircraft = range(len(aircraft_init))
+    days = sorted(set(Days))
+    first_day = days[0] if days else 1
+    history = range(first_day - horizon, first_day)
+    if initial_maintenance_days is None:
+        rng = random.Random(0)
+        initial_maintenance_days = {t: rng.choice(history) for t in aircraft}
+    if (set(initial_maintenance_days) != set(aircraft)
+            or any(day not in history for day in initial_maintenance_days.values())):
+        raise ValueError(f"Supply one initial maintenance day in {list(history)} per aircraft.")
 
-    # ---- mappings --------------------------------------------------------
-    m_Flights_id = {f['id']: f['dest'] for f in flights if f['dest'] in m_airports}
-    flight_day = {i['id']: i['day'] for i in flights}
+    h, x, tail_flights = _build_fleet_model(nb_flights, flights, costs, aircraft_init, data)
+    flight_ids = range(1, nb_flights + 1)
+    all_days = [*history, *days]
+    day_set = set(days)
+    airport_index = {airport: index for index, airport in enumerate(m_airports)}
 
-    flights_by_day = {
-        d: [i for i in Flights_id if flight_day[i] == d]
-        for d in Days
-    }
-    flights_by_origin_day = {
-        (k, d): [j for j in flights if j["origin"] == k and j["day"] == d]
-        for k in m_airports
-        for d in Days
-    }
+    flights_by_day = defaultdict(list)
+    maintenance_by_station = defaultdict(list)
+    maintenance_station = {}
+    for flight in flights:
+        i, day, destination = flight["id"], flight["day"], flight["dest"]
+        if day in day_set:
+            flights_by_day[day].append(flight)
+            if destination in airport_index:
+                maintenance_by_station[destination, day].append(i)
+                maintenance_station[i] = airport_index[destination]
 
-    Days_fictive = list(range(-horizon + 1, 1))
-    tot_days = Days_fictive + Days
-
-    ap_to_id = {ap: idx for idx, ap in enumerate(m_airports)}
-    airports_set = set(data['departures_sorted'].keys())
-
-    # ---- HiGHS instance --------------------------------------------------
-    h = highspy.Highs()
-
-    # ---- variables -------------------------------------------------------
-    x = {}
-    for i in Flights_id:
-        for t in Aircraft:
-            x[i, t] = h.addVariable(
-                lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger
-            )
-
-    y = {}
-    for d in tot_days:
-        for t in Aircraft:
-            y[d, t] = h.addVariable(
-                lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger
-            )
-
-    z = {}
-    for i in Flights_id:
-        for t in Aircraft:
-            z[i, t] = h.addVariable(
-                lb=0.0, ub=1.0, type=highspy.HighsVarType.kInteger
-            )
-
-    # ---- fleet constraints ----------------------------------------------
-    _add_coverage_constraints(h, Aircraft, Flights_id, x)
-    _add_flow_constraints(h, Aircraft, aircraft_init, data, x, airports_set)
-    _add_base_constraints(h, Aircraft, aircraft_init, data, x)
-    _add_duplicate_constraints(h, Aircraft, flights, x)
-
-    # ---- maintenance constraints ----------------------------------------
-    _add_maintenance_constraints(
-        h, Aircraft, Days, Days_fictive, tot_days, horizon,
-        Flights_id, flights, flights_by_day, flights_by_origin_day,
-        m_airports, cap_maintenance, x, y, z,
+    eligible = {}
+    for t in aircraft:
+        eligible[t] = tail_flights[t].intersection(maintenance_station)
+    y = h.addVariables(
+        all_days,
+        aircraft,
+        lb=[float(d == initial_maintenance_days[t]) for d in all_days for t in aircraft],
+        ub=[float(d in day_set or d == initial_maintenance_days[t])
+            for d in all_days for t in aircraft],
+        type=highspy.HighsVarType.kInteger,
+        out_array=False,
+    )
+    z = h.addVariables(
+        flight_ids,
+        aircraft,
+        ub=[float(i in eligible[t]) for i in flight_ids for t in aircraft],
+        obj=[m_costs[t][maintenance_station[i]] if i in eligible[t] else 0.0
+             for i in flight_ids for t in aircraft],
+        type=highspy.HighsVarType.kInteger,
+        out_array=False,
     )
 
-    # ---- objective: flight costs + maintenance positioning costs --------
-    cost_it = {
-        (i, t): m_costs[t][ap_to_id[data['flight_destination'][i]]]
-        for i in m_Flights_id for t in Aircraft
-    }
+    for i, t in z:
+        if i in eligible[t]:
+            h.addRow(-highspy.kHighsInf, 0.0, 2, [z[i, t].index, x[i, t].index], [1.0, -1.0])
 
-    obj = [0.0] * h.getNumCol()
-    for i in Flights_id:
-        for t in Aircraft:
-            obj[x[i, t]] = costs[i - 1][t]
-    for i in m_Flights_id:
-        for t in Aircraft:
-            obj[z[i, t]] = cost_it[i, t]
+    for (station, day), ids in maintenance_by_station.items():
+        columns = [z[i, t].index for i in ids for t in aircraft if i in eligible[t]]
+        h.addRow(-highspy.kHighsInf, cap_maintenance, len(columns), columns, [1.0] * len(columns))
 
-    _apply_objective(h, obj)
+    _add_maintenance_day_constraints(h, days, flights_by_day, eligible, x, y, z)
+    if days:
+        _add_maintenance_windows(h, days, horizon, initial_maintenance_days, y)
 
     return h, x, y, z
 
 
-# ===========================================================================
-# Maintenance constraint helpers
-# ===========================================================================
+def _add_maintenance_day_constraints(h, days, flights_by_day, eligible, x, y, z):
+    for day in days:
+        by_departure = sorted(flights_by_day[day], key=lambda f: f["departure"])
+        departure_groups = [
+            [f["id"] for f in group]
+            for _, group in groupby(by_departure, key=lambda f: f["departure"])
+        ]
+        for t, candidates in eligible.items():
+            previous_maintenance = []
+            for group in departure_groups:
+                if previous_maintenance:
+                    # A tail can depart at most once at this time, and only
+                    # if it has not taken its maintenance flight earlier today.
+                    columns = [x[i, t].index for i in group] + previous_maintenance
+                    h.addRow(-highspy.kHighsInf, 1.0, len(columns), columns, [1.0] * len(columns))
+                previous_maintenance.extend(z[i, t].index for i in group if i in candidates)
 
-def _add_coverage_constraints(h, Aircraft, Flights_id, x):
-    """C1 — every flight is assigned exactly once."""
-    for i in Flights_id:
-        h.addConstr(
-            sum(x[i, t] for t in Aircraft) == 1,
-            name=f"coverage_{i}",
-        )
-
-
-def _add_flow_constraints(h, Aircraft, aircraft_init, data, x, airports_set):
-    """C2 — flow constraints excluding the base airport."""
-    for t in Aircraft:
-        for airport in airports_set:
-            if airport == aircraft_init.get(t):
-                continue
-
-            departures = data['departures_sorted'].get(airport, [])
-            departure_times = [data['flight_departure_time'][fid] for fid in departures]
-            arrivals = data['arrivals_sorted'].get(airport, [])
-            arrival_times = [data['flight_arrival_time'][fid] for fid in arrivals]
-
-            for target_fid in departures:
-                target_time = data['flight_departure_time'][target_fid]
-
-                idx_arrivals = bisect.bisect_right(arrival_times, target_time)
-                arrivals_fids = arrivals[:idx_arrivals]
-
-                idx_departures = bisect.bisect_left(departure_times, target_time)
-                departures_fids = departures[:idx_departures]
-
-                expr = (
-                    sum(x[f, t] for f in arrivals_fids)
-                    - sum(x[f, t] for f in departures_fids)
-                    - x[target_fid, t]
-                )
-                h.addConstr(expr >= 0, name=f"flow_{t}_{airport}_{target_fid}")
+            columns = previous_maintenance + [y[day, t].index]
+            coefficients = [1.0] * len(previous_maintenance) + [-1.0]
+            h.addRow(0.0, 0.0, len(columns), columns, coefficients)
 
 
-def _add_base_constraints(h, Aircraft, aircraft_init, data, x):
-    """C3 — flow constraints for the base airport (allows -1 offset)."""
-    for t in Aircraft:
-        airport = aircraft_init.get(t)
-        departures = data['departures_sorted'].get(airport, [])
-        departure_times = [data['flight_departure_time'][fid] for fid in departures]
-        arrivals = data['arrivals_sorted'].get(airport, [])
-        arrival_times = [data['flight_arrival_time'][fid] for fid in arrivals]
-
-        for target_fid in departures:
-            target_time = data['flight_departure_time'][target_fid]
-
-            idx_arrivals = bisect.bisect_right(arrival_times, target_time)
-            arrivals_fids = arrivals[:idx_arrivals]
-
-            idx_departures = bisect.bisect_left(departure_times, target_time)
-            departures_fids = departures[:idx_departures]
-
-            expr = (
-                sum(x[f, t] for f in arrivals_fids)
-                - sum(x[f, t] for f in departures_fids)
-                - x[target_fid, t]
-            )
-            h.addConstr(expr >= -1, name=f"base_{t}_{airport}_{target_fid}")
+def _add_maintenance_windows(h, days, horizon, initial_maintenance_days, y):
+    for t, previous_day in initial_maintenance_days.items():
+        # Earlier windows already contain the fixed historical maintenance.
+        for end in range(previous_day + horizon, days[-1] + 1):
+            columns = [y[d, t].index for d in days if end - horizon < d <= end]
+            h.addRow(1.0, highspy.kHighsInf, len(columns), columns, [1.0] * len(columns))
 
 
-def _add_duplicate_constraints(h, Aircraft, flights, x):
-    """C4 — at most one of two duplicate flights per aircraft."""
-    seen = {}
-    Doublons = []
-    for fi in flights:
-        key = (fi['departure'], fi['arrival'], fi['origin'], fi['dest'])
-        if key in seen:
-            Doublons.append((seen[key], fi['id']))
-        else:
-            seen[key] = fi['id']
+def minimize_maintenance_visits(h, x, y, days, time_limit):
+    """Re-solve with fixed flights and return the refined plan's operating cost."""
+    if (time_limit <= 0
+            or h.getInfo().primal_solution_status != highspy.SolutionStatus.kSolutionStatusFeasible):
+        return None
 
-    for t in Aircraft:
-        for (i, j) in Doublons:
-            h.addConstr(x[i, t] + x[j, t] <= 1, name=f"dup_{i}_{j}_{t}")
+    incumbent = h.getSolution()
+    costs = h.getLp().col_cost_
+    flight_columns = [var.index for var in x.values()]
+    flight_column_set = set(flight_columns)
+    assignments = [float(incumbent.col_value[col] > 0.5) for col in flight_columns]
+    flight_cost = fsum(costs[col] for col, assigned in zip(flight_columns, assignments) if assigned)
+    h.changeColsBounds(len(flight_columns), flight_columns, assignments, assignments)
 
+    # Flight costs are constant once the assignments have been fixed.
+    cost_columns = [col for col, cost in enumerate(costs) if cost and col not in flight_column_set]
+    if cost_columns:
+        cost_limit = fsum(costs[col] for col in cost_columns if incumbent.col_value[col] > 0.5)
+        h.addRow(-highspy.kHighsInf, cost_limit, len(cost_columns),
+                 cost_columns, [costs[col] for col in cost_columns])
 
-def _add_maintenance_constraints(
-    h, Aircraft, Days, Days_fictive, tot_days, horizon,
-    Flights_id, flights, flights_by_day, flights_by_origin_day,
-    m_airports, cap_maintenance, x, y, z,
-):
-    flight_departure = {i['id']: i['departure'] for i in flights}
-    flight_arrival = {i['id']: i['arrival'] for i in flights}
+    planning_days = set(days)
+    visit_costs = [0.0] * len(costs)
+    for (day, _), var in y.items():
+        if day in planning_days:
+            visit_costs[var.index] = 1.0
+    h.changeColsCost(len(costs), list(range(len(costs))), visit_costs)
+    h.setSolution(incumbent)
+    h.setOptionValue("mip_rel_gap", 0.0)
+    h.setOptionValue("time_limit", time_limit)
+    h.run()
 
-    # Initial maintenance day (one random fictitious day per aircraft)
-    d_m = [random.choice(Days_fictive) for _ in Aircraft]
-    for t in Aircraft:
-        for d in Days_fictive:
-            target = 1 if d == d_m[t] else 0
-            h.addConstr(y[d, t] == target, name=f"init_maint_{d}_{t}")
-
-    # At least one maintenance every `horizon` days
-    for t in Aircraft:
-        for d0 in tot_days:
-            if d0 + horizon in tot_days:
-                window = [d for d in range(d0 + 1, d0 + horizon + 1) if d in tot_days]
-                if window:
-                    h.addConstr(
-                        sum(y[d, t] for d in window) >= 1,
-                        name=f"maint_window_{t}_{d0}",
-                    )
-
-    # z implies x
-    for i in Flights_id:
-        for t in Aircraft:
-            h.addConstr(x[i, t] >= z[i, t], name=f"z_implies_x_{i}_{t}")
-
-    # The last flight of the day matches the maintenance airport
-    for t in Aircraft:
-        for d in Days:
-            for i in flights_by_day[d]:
-                for j in flights_by_day[d]:
-                    if flight_departure[j] > flight_arrival[i]:
-                        h.addConstr(
-                            z[i, t] + x[j, t] <= 1,
-                            name=f"last_flight_{t}_{d}_{i}_{j}",
-                        )
-
-    # If an aircraft is sent for maintenance, there is a flight for it
-    for t in Aircraft:
-        for d in Days:
-            trigger = [
-                z[j["id"], t]
-                for k in m_airports
-                for j in flights_by_origin_day.get((k, d), [])
-            ]
-            if trigger:
-                h.addConstr(
-                    sum(trigger) == y[d, t],
-                    name=f"maint_link_{t}_{d}",
-                )
-            else:
-                h.addConstr(y[d, t] == 0, name=f"maint_link_empty_{t}_{d}")
-
-    # Maintenance capacity per (airport, day)
-    for k in m_airports:
-        for d in Days:
-            trigger = [
-                z[i["id"], t]
-                for t in Aircraft
-                for i in flights_by_origin_day.get((k, d), [])
-            ]
-            if trigger:
-                h.addConstr(
-                    sum(trigger) <= cap_maintenance,
-                    name=f"maint_cap_{k}_{d}",
-                )
-
-
-# ===========================================================================
-# Objective helpers
-# ===========================================================================
-
-def _apply_objective(h, obj):
-    """Push a dense coefficient vector to HiGHS and set minimise sense."""
-    for col, coef in enumerate(obj):
-        if coef != 0.0:
-            h.changeColCost(col, coef)
-    h.changeObjectiveSense(highspy.ObjSense.kMinimize)
+    if h.getInfo().primal_solution_status == highspy.SolutionStatus.kSolutionStatusFeasible:
+        solution = h.getSolution()
+        maintenance_cost = fsum(costs[col] for col in cost_columns if solution.col_value[col] > 0.5)
+        return flight_cost + maintenance_cost
+    return None

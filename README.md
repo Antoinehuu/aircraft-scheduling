@@ -47,6 +47,7 @@ projet/
 ```bash
 python -m src.gurobi.main
 python -m src.highs.main
+python -m src.highs.main data/d=0.9
 python -m src.or_tools.main
 python -m src.hexaly.main
 python -m src.hexaly.main data/d=0.9 --output src/hexaly/results.csv
@@ -61,6 +62,13 @@ available at their scheduled time. Each aircraft operates a route from its
 initial base and may end at any airport. The total cost includes every flight
 in each route. Equation (12) in the report omits the cost of the final flight
 of each route. [Fleet-assignment report](results/Rapport_project_no_maintenances.pdf)
+
+### HiGHS maintenance scheduling
+
+```bash
+
+```
+
 
 ### `src/data_loader.py`
 
