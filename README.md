@@ -63,31 +63,71 @@ initial base and may end at any airport. The total cost includes every flight
 in each route. Equation (12) in the report omits the cost of the final flight
 of each route. [Fleet-assignment report](results/Rapport_project_no_maintenances.pdf)
 
-### Maintenance scheduling
+## Benchmark Results
+
+Each solver cell shows **instances marked `OPTIMAL` / instances run (median solve time for `OPTIMAL` runs)**.
+The **Instances** column counts distinct instances across all four CSVs. Each
+solver contributes its latest run with a recorded runtime per instance. Coverage
+varies by solver, especially at 30 and 40 aircraft. A dash indicates that the
+solver recorded no `OPTIMAL` runs in that group.
+
+### Tail assignement model
+
+| Aircrafts | Instances | Time Limit | [Gurobi](src/gurobi/results.csv) | [HiGHS](src/highs/results.csv) | [OR-Tools](src/or_tools/results.csv) | [Hexaly](src/hexaly/results.csv) |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 10 | 121 | 600 | 121/121 (0.28 s) | 121/121 (0.76 s) | 121/121 (0.42 s) | 121/121 (1.77 s) |
+| 20 | 120 | 600| 120/120 (3.84 s) | 111/120 (27.50 s) | 101/120 (45.07 s) | 115/120 (38.44 s) |
+| 30 | 120 |600| 120/120 (14.47 s) | 20/82 (158.73 s) | 8/56 (236.79 s) | 11/89 (91.07 s) |
+| 40 | 120 | 600 | 120/120 (147.67 s) | 3/51 (428.39 s) | 0/14 (—) | 1/40 (469.71 s) |
+
+### Tail assignement with mainteances
+
+| Aircraft | Instances | Time Limit | [Gurobi](src/gurobi/results_maintenance.csv) | [HiGHS](src/highs/results_maintenance.csv) | [OR-Tools](src/or_tools/results_maintenance.csv) | [Hexaly](src/hexaly/results_maintenance.csv) |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 10 | 15 | 600 | 15/15 (2.67 s) | 15/15 (8.54 s) | 15/15 (4.36 s) | 15/15 (13.90 s) |
+| 20 | 15 | 600 | 15/15 (14.84 s) | 1/4 (588.61 s) | 3/15 (293.93 s) | 0/15 (—) |
+| 30 | 10 | 600 | 4/10 (281.17 s) | — | 0/10 (—) | 0/10 (—) |
+
+### Plot solver results
+
+Run any of these commands from the repository root to open plots for that solver.
 
 ```bash
-python -m src.gurobi.main data_with_maintenance_constraints/d=4
-python -m src.highs.main data_with_maintenance_constraints/d=4
-python -m src.or_tools.main data_with_maintenance_constraints/d=4
-python -m src.hexaly.main data_with_maintenance_constraints/d=4
+python -m plot.gurobi
+python -m plot.highs
+python -m plot.or_tools
+python -m plot.hexaly
 ```
 
-Each runner accepts a directory or a single `.dat` file. Input paths containing
-`maintenance` write to `src/<solver>/results_maintenance.csv` by default.
-Other runs write to `src/<solver>/results.csv`. Use `--output` to set a different path.
+Each available CSV gets a figure with status counts, solve time, objective value,
+and MIP gap. Each CSV row counts as a run. The metric plots omit missing or
+non-finite values and show the number of runs plotted. The scripts require Matplotlib.
 
-Maintenance uses the airport where the aircraft lands after its last flight
-of the day. A rolling window controls when maintenance is due. The inputs have no initial maintenance
-history, so all four backends use the same reproducible sample by default.
-Programmatic callers can pass `initial_maintenance_days` to supply the last
-maintenance day for each aircraft.
+Use `--dataset fleet` or `--dataset maintenance` to select a standard CSV,
+`--csv PATH` to read a custom CSV, or `--save-dir PATH` to save PNGs.
 
-The runners use a fleet-only solution to seed the cost solve when available.
-If time remains after finding a feasible schedule, they fix the selected
-flight assignments and minimize maintenance visits within the cost cap.
-`--time-limit` sets the solver budget per instance. The CSV reports operating
-cost and its gap, and the console shows the maintenance visit count when
-refinement succeeds. [Maintenance report](results/Rapport_projet.pdf#page=9)
+```bash
+python -m plot.gurobi --dataset maintenance --save-dir /tmp/solver-plots
+```
+
+### Compare solvers by aircraft count
+
+```bash
+python -m plot.compare
+python -m plot.compare --dataset maintenance --save-dir /tmp/solver-plots
+```
+
+The comparison opens one figure per dataset by default. Runtime box plots use a
+logarithmic scale and include recorded runtimes for time limits and runs without
+an objective. A symmetric log scale includes recorded zero times when needed.
+The lower charts show the share of plotted runs with a finite objective and the
+number of runs behind each bar.
+
+The left column uses instances shared by the displayed solvers, matched by
+filename, aircraft count, flight count, and the CSV's `horizon` field. The right
+column uses each solver's available instances so larger aircraft counts stay
+visible when coverage differs. If a CSV contains repeats, the comparison uses
+the last row with a usable runtime for each instance.
 
 ### `src/data_loader.py`
 
