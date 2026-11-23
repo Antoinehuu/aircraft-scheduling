@@ -34,6 +34,12 @@ Requires a Gurobi license; there is a tutorial for an academic license at the en
 pip install -r requirements.txt
 ```
 
+### HiGHS
+
+```bash
+python -m pip install highspy
+```
+
 ### Hexaly
 
 Install the optional Python package with 

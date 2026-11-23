@@ -1,41 +1,22 @@
 filename,nb_flights,nb_aircrafts,horizon,nb_vars,nb_constrs,nb_nonzeros,solve_time,work_units,obj_value,mip_gap,status
-DataCplex_density=1_p=10_h=15_test_0.dat,408,10,8,8390,45866,278010,600.79,,3436770.0,0.0214,Time limit reached
-DataCplex_density=1_p=10_h=15_test_1.dat,425,10,8,8730,50629,295870,600.63,,3595283.0,0.0213,Time limit reached
-DataCplex_density=1_p=10_h=15_test_2.dat,417,10,8,8570,48987,281610,399.36,,3528437.0,0.0163,Optimal
-DataCplex_density=1_p=10_h=15_test_3.dat,411,10,8,8450,46900,280840,600.57,,3440334.0,0.0201,Time limit reached
-DataCplex_density=1_p=10_h=15_test_4.dat,410,10,8,8430,46882,276120,81.73,,3384855.0,0.0113,Optimal
-DataCplex_density=1_p=10_h=20_test_4.dat,486,10,11,10030,50150,357000,87.93,,4014123.0,0.0082,Optimal
-DataCplex_density=1_p=10_h=21_test_0.dat,487,10,11,10060,48876,367130,157.06,,4041893.0,0.0157,Optimal
-DataCplex_density=1_p=10_h=21_test_1.dat,490,10,11,10120,48290,383790,494.49,,4066438.0,0.0149,Optimal
-DataCplex_density=1_p=10_h=21_test_2.dat,495,10,11,10220,49424,380490,600.86,,,,Time limit reached
-DataCplex_density=1_p=10_h=21_test_3.dat,499,10,11,10300,51692,385480,427.78,,4137946.0,0.0127,Optimal
-DataCplex_density=1_p=10_h=30_test_0.dat,578,10,16,12020,50903,471270,113.19,,4746800.0,0.0016,Optimal
-DataCplex_density=1_p=10_h=30_test_1.dat,568,10,16,11820,50433,461670,184.29,,4668757.0,0.001,Optimal
-DataCplex_density=1_p=10_h=30_test_2.dat,574,10,16,11940,51384,469090,266.71,,4730581.0,0.0054,Optimal
-DataCplex_density=1_p=10_h=30_test_3.dat,547,10,16,11400,46759,432370,55.49,,4491175.0,0.0,Optimal
-DataCplex_density=1_p=10_h=30_test_4.dat,570,10,16,11860,49774,463510,190.08,,4712033.0,0.0067,Optimal
-DataCplex_density=1_p=20_h=15_test_0.dat,735,20,8,29860,266834,1705300,606.16,,,,Time limit reached
-DataCplex_density=1_p=20_h=15_test_1.dat,739,20,8,30020,277070,1726620,603.1,,,,Time limit reached
-DataCplex_density=1_p=20_h=15_test_2.dat,724,20,8,29420,266035,1635420,602.98,,,,Time limit reached
-DataCplex_density=1_p=20_h=15_test_3.dat,716,20,8,29100,258876,1599820,698.66,,,,Time limit reached
-DataCplex_density=1_p=20_h=15_test_4.dat,731,20,8,29700,271221,1691600,677.98,,,,Time limit reached
-DataCplex_density=1_p=20_h=21_test_0.dat,868,20,11,35360,281287,2136160,603.55,,,,Time limit reached
-DataCplex_density=1_p=20_h=21_test_1.dat,889,20,11,36200,291868,2193760,603.69,,,,Time limit reached
-DataCplex_density=1_p=20_h=21_test_2.dat,886,20,11,36080,290564,2179020,603.64,,,,Time limit reached
-DataCplex_density=1_p=20_h=21_test_3.dat,881,20,11,35880,282864,2141760,603.57,,,,Time limit reached
-DataCplex_density=1_p=20_h=21_test_4.dat,879,20,11,35800,288999,2182540,603.63,,,,Time limit reached
-DataCplex_density=1_p=20_h=30_test_0.dat,1023,20,16,41840,295471,2705840,606.41,,,,Time limit reached
-DataCplex_density=1_p=20_h=30_test_1.dat,1002,20,16,41000,293087,2621580,604.09,,,,Time limit reached
-DataCplex_density=1_p=20_h=30_test_2.dat,998,20,16,40840,284399,2573060,604.02,,,,Time limit reached
-DataCplex_density=1_p=20_h=30_test_3.dat,1014,20,16,41480,287722,2674880,604.14,,,,Time limit reached
-DataCplex_density=1_p=20_h=30_test_4.dat,994,20,16,40680,282766,2555620,604.0,,,,Time limit reached
-DataCplex_density=1_p=30_h=15_test_0.dat,1015,30,8,61590,761287,4631010,608.37,,,,Time limit reached
-DataCplex_density=1_p=30_h=15_test_1.dat,1018,30,8,61770,762157,4571220,608.36,,,,Time limit reached
-DataCplex_density=1_p=30_h=15_test_2.dat,1027,30,8,62310,785172,4715730,608.56,,,,Time limit reached
-DataCplex_density=1_p=30_h=15_test_3.dat,1029,30,8,62430,783260,4683090,608.53,,,,Time limit reached
-DataCplex_density=1_p=30_h=15_test_4.dat,1016,30,8,61650,762434,4565670,608.27,,,,Time limit reached
-DataCplex_density=1_p=30_h=21_test_0.dat,1175,30,11,71460,772308,5704320,609.49,,,,Time limit reached
-DataCplex_density=1_p=30_h=21_test_1.dat,1167,30,11,70980,763681,5647950,609.47,,,,Time limit reached
-DataCplex_density=1_p=30_h=21_test_2.dat,1171,30,11,71220,770892,5681130,609.55,,,,Time limit reached
-DataCplex_density=1_p=30_h=21_test_3.dat,1176,30,11,71520,788628,5747130,609.62,,,,Time limit reached
-DataCplex_density=1_p=30_h=21_test_4.dat,1174,30,11,71400,776864,5761980,609.62,,,,Time limit reached
+
+
+DataCplex_density=1_p=10_h=15_test_0.dat,408,10,8,8390,10089,169411,6.07,,3472313.0,0.0035,Optimal
+DataCplex_density=1_p=10_h=15_test_1.dat,425,10,8,8730,10336,178917,6.58,,3607896.0,0.0018,Optimal
+DataCplex_density=1_p=10_h=15_test_2.dat,417,10,8,8570,10382,173456,6.32,,3534533.0,0.0001,Optimal
+DataCplex_density=1_p=10_h=15_test_3.dat,411,10,8,8450,10205,167058,53.97,,3475220.0,0.0,Optimal
+DataCplex_density=1_p=10_h=15_test_4.dat,410,10,8,8430,10128,164097,5.48,,3469584.0,0.0001,Optimal
+DataCplex_density=1_p=10_h=20_test_4.dat,486,10,11,10030,11603,201863,7.82,,4092290.0,0.0001,Optimal
+DataCplex_density=1_p=10_h=21_test_0.dat,487,10,11,10060,12394,223211,7.57,,4100965.0,0.0,Optimal
+DataCplex_density=1_p=10_h=21_test_1.dat,490,10,11,10120,12129,228419,8.83,,4134873.0,0.0001,Optimal
+DataCplex_density=1_p=10_h=21_test_2.dat,495,10,11,10220,12773,241909,7.34,,4178625.0,0.0001,Optimal
+DataCplex_density=1_p=10_h=21_test_3.dat,499,10,11,10300,12581,231018,8.54,,4214044.0,0.0001,Optimal
+DataCplex_density=1_p=10_h=30_test_0.dat,578,10,16,12020,14648,275825,10.53,,4862188.0,0.0001,Optimal
+DataCplex_density=1_p=10_h=30_test_1.dat,568,10,16,11820,14402,271639,10.91,,4776993.0,0.0001,Optimal
+DataCplex_density=1_p=10_h=30_test_2.dat,574,10,16,11940,14749,275451,13.32,,4820929.0,0.0001,Optimal
+DataCplex_density=1_p=10_h=30_test_3.dat,547,10,16,11400,14089,258038,8.72,,4613855.0,0.0,Optimal
+DataCplex_density=1_p=10_h=30_test_4.dat,570,10,16,11860,14579,277142,11.87,,4796689.0,0.0001,Optimal
+DataCplex_density=1_p=20_h=15_test_0.dat,735,20,8,29860,32795,810039,588.61,,6335130.0,0.0001,Optimal
+DataCplex_density=1_p=20_h=15_test_1.dat,739,20,8,30020,32937,848738,600.19,,,,Time limit reached
+DataCplex_density=1_p=20_h=15_test_2.dat,724,20,8,29420,32764,843702,600.26,,,,Time limit reached
+DataCplex_density=1_p=20_h=15_test_3.dat,716,20,8,29100,32166,797200,2611.68,,,,Time limit reached

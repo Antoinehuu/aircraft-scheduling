@@ -47,10 +47,47 @@ projet/
 ```bash
 python -m src.gurobi.main
 python -m src.highs.main
+python -m src.highs.main data/d=0.9
 python -m src.or_tools.main
 python -m src.hexaly.main
 python -m src.hexaly.main data/d=0.9 --output src/hexaly/results.csv
 ```
+
+### Fleet assignment
+
+For instances in `data/`, the solver backends use one binary assignment
+`x[i, t]` for each flight `i` and aircraft `t`. Coverage assigns each flight
+once. Airport balances group simultaneous departures and make arrivals
+available at their scheduled time. Each aircraft operates a route from its
+initial base and may end at any airport. The total cost includes every flight
+in each route. Equation (12) in the report omits the cost of the final flight
+of each route. [Fleet-assignment report](results/Rapport_project_no_maintenances.pdf)
+
+### Maintenance scheduling
+
+```bash
+python -m src.gurobi.main data_with_maintenance_constraints/d=4
+python -m src.highs.main data_with_maintenance_constraints/d=4
+python -m src.or_tools.main data_with_maintenance_constraints/d=4
+python -m src.hexaly.main data_with_maintenance_constraints/d=4
+```
+
+Each runner accepts a directory or a single `.dat` file. Input paths containing
+`maintenance` write to `src/<solver>/results_maintenance.csv` by default.
+Other runs write to `src/<solver>/results.csv`. Use `--output` to set a different path.
+
+Maintenance uses the airport where the aircraft lands after its last flight
+of the day. A rolling window controls when maintenance is due. The inputs have no initial maintenance
+history, so all four backends use the same reproducible sample by default.
+Programmatic callers can pass `initial_maintenance_days` to supply the last
+maintenance day for each aircraft.
+
+The runners use a fleet-only solution to seed the cost solve when available.
+If time remains after finding a feasible schedule, they fix the selected
+flight assignments and minimize maintenance visits within the cost cap.
+`--time-limit` sets the solver budget per instance. The CSV reports operating
+cost and its gap, and the console shows the maintenance visit count when
+refinement succeeds. [Maintenance report](results/Rapport_projet.pdf#page=9)
 
 ### `src/data_loader.py`
 
@@ -69,13 +106,10 @@ Main functions:
 
 Optimizations via suitable dictionaries
 
-### `src/model.py`
+### `src/formulation.py`
 
-- `build_and_solve_model(...)`
-- `_add_flow_constraints()` → Contraints C2
-- `_add_base_constraints()` → Contraints C3
-- `_add_duplicate_constraints()` → Contraints C4
-- `_add_maintenance_constraints()` → Maintenance contraints
+Shared reachability checks, fleet balance rows, and maintenance rules used by
+all solver backends.
 
 ### `src/__init__.py`
 
