@@ -9,10 +9,10 @@ import gurobipy
 from src import load_dat_file, preprocess_flights
 from src.gurobi import build_and_solve
 from src.gurobi.model import prepare_maintenance_refinement
-from src.solver_cli import results_for, run_batch
+from src.solver_cli import fleet_start_for, results_for, run_batch
 
 
-def solve_instance(filepath, time_limit=600):
+def solve_instance(filepath, time_limit=600, mip_gap=0.02):
     filepath = str(filepath)
     instance = load_dat_file(filepath)
     data = preprocess_flights(instance[3], instance[7], instance[6])
@@ -22,11 +22,13 @@ def solve_instance(filepath, time_limit=600):
     with model:
         model.Params.OutputFlag = 0
         model.Params.Presolve = 1
-        model.Params.MIPGap = 0.02
+        model.Params.MIPGap = mip_gap
+        assignment, _ = fleet_start_for(instance)
+        if assignment:
+            for (i, t), var in x.items():
+                var.Start = int(assignment[i] == t)
         deadline = perf_counter() + time_limit
-        if maintenance:
-            _seed_maintenance_solve(x, instance, data, min(10, time_limit / 5))
-        model.Params.TimeLimit = max(0, deadline - perf_counter())
+        model.Params.TimeLimit = time_limit
         model.optimize()
 
         counts = model.NumVars, model.NumConstrs, model.NumNZs
@@ -48,18 +50,6 @@ def solve_instance(filepath, time_limit=600):
                         cost = refined
                         gap = abs(cost - bound) / abs(cost) if cost else (0 if bound == 0 else inf)
         return results_for(filepath, instance, counts, start, status, cost, gap, work)
-
-
-def _seed_maintenance_solve(x, instance, data, time_limit):
-    fleet, fleet_x, _, _ = build_and_solve(*instance, data, False)
-    with fleet:
-        fleet.Params.OutputFlag = 0
-        fleet.Params.TimeLimit = time_limit
-        fleet.Params.MIPGap = 0.02
-        fleet.optimize()
-        if fleet.SolCount:
-            for key, var in fleet_x.items():
-                x[key].Start = round(var.X)
 
 
 def _gurobi_status_name(status_code):

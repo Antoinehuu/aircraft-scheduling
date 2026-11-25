@@ -63,6 +63,18 @@ initial base and may end at any airport. The total cost includes every flight
 in each route. Equation (12) in the report omits the cost of the final flight
 of each route. [Fleet-assignment report](results/Rapport_project_no_maintenances.pdf)
 
+All four solvers start from the same deterministic chronological aircraft
+assignment when one is available. For maintenance instances, this supplies
+flight assignments and leaves the maintenance decisions to the solver.
+
+For benchmark runs, use the same inputs, `--time-limit`, and `--mip-gap`
+(default 0.02) for each solver. Reported time includes model construction and
+start preparation. The time limit applies to solver calls, and each solver uses
+its own stopping rules.
+HiGHS also offers `--certify-start` for fleet-only runs. It can return early
+as `Target for objective reached` when the starting assignment meets the
+requested gap against a separate cost bound.
+
 ## Benchmark Results
 
 Each solver cell shows **instances marked `OPTIMAL` / instances run (median solve time for `OPTIMAL` runs)**.

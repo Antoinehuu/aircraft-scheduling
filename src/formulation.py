@@ -3,7 +3,29 @@
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from itertools import groupby
+from math import inf
 from random import Random
+
+
+def initial_fleet_assignment(flights, costs, aircraft_init):
+    """Return a deterministic starting tail for each flight in a feasible fleet schedule."""
+    ready = {tail: (airport, -inf) for tail, airport in aircraft_init.items()}
+    assigned = {}
+    used = set()
+    for flight in sorted(flights, key=lambda f: (f["departure"], f["id"])):
+        i = flight["id"]
+        available = (
+            tail for tail, (airport, time) in ready.items()
+            if airport == flight["origin"] and time <= flight["departure"]
+        )
+        # Every tail must fly, so prefer one that has not left its base yet.
+        tail = min(available, key=lambda t: (t in used, costs[i - 1][t], t), default=None)
+        if tail is None:
+            return None
+        assigned[i] = tail
+        used.add(tail)
+        ready[tail] = (flight["dest"], flight["arrival"])
+    return assigned if len(used) == len(aircraft_init) else None
 
 
 def tail_reachability(flights, aircraft_init):

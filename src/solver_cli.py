@@ -2,9 +2,11 @@
 
 import argparse
 import csv
+from math import fsum, isfinite
 from pathlib import Path
 from time import perf_counter
 
+from src.formulation import initial_fleet_assignment
 
 CSV_FIELDS = (
     "filename", "nb_flights", "nb_aircrafts", "horizon", "nb_vars",
@@ -35,14 +37,27 @@ def default_results_path(input_path, output_dir):
     return output_dir / filename
 
 
+def fleet_start_for(instance):
+    flights, costs, aircraft_init = instance[3], instance[4], instance[6]
+    assignment = initial_fleet_assignment(flights, costs, aircraft_init)
+    if assignment:
+        cost = fsum(costs[i - 1][t] for i, t in assignment.items())
+        print(f"Fleet start | flights={len(assignment)} | flight cost={cost:.2f}")
+        return assignment, cost
+    return None, None
+
+
 def run_batch(solve_instance, default_input, output_dir, description):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("input", type=Path, nargs="?", default=Path(default_input))
     parser.add_argument("--output", type=Path, help="override the solver's default results CSV")
     parser.add_argument("--time-limit", type=int, default=600, help="solver seconds per instance")
+    parser.add_argument("--mip-gap", type=float, default=0.02, help="relative operating-cost gap (default: 0.02)")
     args = parser.parse_args()
     if args.time_limit <= 0:
         parser.error("--time-limit must be positive")
+    if not isfinite(args.mip_gap) or args.mip_gap < 0:
+        parser.error("--mip-gap must be a nonnegative finite number")
     if args.input.is_dir():
         paths = sorted(path for path in args.input.glob("*.dat") if path.is_file())
     else:
@@ -54,7 +69,7 @@ def run_batch(solve_instance, default_input, output_dir, description):
     failed = False
     for path in paths:
         try:
-            results = solve_instance(path, args.time_limit)
+            results = solve_instance(path, args.time_limit, args.mip_gap)
         except Exception as exc:
             failed = True
             results = {"filename": path.name, "status": f"ERROR: {exc}"}

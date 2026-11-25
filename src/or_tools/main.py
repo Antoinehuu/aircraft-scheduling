@@ -8,21 +8,23 @@ from ortools.sat.python import cp_model
 from src import load_dat_file, preprocess_flights
 from src.or_tools import build_and_solve
 from src.or_tools.model import prepare_maintenance_refinement
-from src.solver_cli import results_for, run_batch
+from src.solver_cli import fleet_start_for, results_for, run_batch
 
 
-def solve_instance(filepath, time_limit=600):
+def solve_instance(filepath, time_limit=600, mip_gap=0.02):
     filepath = str(filepath)
     instance = load_dat_file(filepath)
     data = preprocess_flights(instance[3], instance[7], instance[6])
     maintenance = "maintenance" in filepath
     start = perf_counter()
     model, x, y, z, solver = build_and_solve(*instance, data, maintenance, log_search_progress=False)
-    solver.parameters.relative_gap_limit = 0.02
+    solver.parameters.relative_gap_limit = mip_gap
+    assignment, _ = fleet_start_for(instance)
+    if assignment:
+        for (i, t), var in x.items():
+            model.add_hint(var, int(assignment[i] == t))
     deadline = perf_counter() + time_limit
-    if maintenance:
-        _seed_maintenance_solve(model, x, instance, data, min(10, time_limit / 5))
-    solver.parameters.max_time_in_seconds = max(0, deadline - perf_counter())
+    solver.parameters.max_time_in_seconds = time_limit
     status = solver.solve(model)
     status_name = solver.status_name(status)
     counts = len(model.proto.variables), len(model.proto.constraints), None
@@ -41,16 +43,6 @@ def solve_instance(filepath, time_limit=600):
         gap = abs(cost - bound) / abs(cost) if cost else abs(bound)
         cost /= 1000
     return results_for(filepath, instance, counts, start, status_name, cost, gap)
-
-
-def _seed_maintenance_solve(model, x, instance, data, time_limit):
-    fleet, fleet_x, _, _, solver = build_and_solve(
-        *instance, data, False, time_limit_seconds=time_limit, log_search_progress=False
-    )
-    solver.parameters.relative_gap_limit = 0.02
-    if solver.solve(fleet) in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        for key, var in fleet_x.items():
-            model.add_hint(x[key], solver.value(var))
 
 
 def main():

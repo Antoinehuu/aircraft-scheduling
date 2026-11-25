@@ -15,10 +15,10 @@ import highspy
 from src import load_dat_file, preprocess_flights
 from src.highs import build_and_solve
 from src.highs.model import minimize_maintenance_visits
-from src.solver_cli import default_results_path
+from src.solver_cli import default_results_path, fleet_start_for
 
 
-def solve_instance(filepath, time_limit=600.0):
+def solve_instance(filepath, time_limit=600.0, mip_gap=0.02, *, certify_start=False):
     filepath = str(filepath)
     print(f"\n{'='*70}")
     print(f"Processing: {os.path.basename(filepath)}")
@@ -49,20 +49,25 @@ def solve_instance(filepath, time_limit=600.0):
     # Solver options (mirror the Gurobi block)
     # HiGHS uses setOptionValue, not setParam
     h.setOptionValue("output_flag", True)       # OutputFlag
-    h.setOptionValue("mip_rel_gap", 0.02)       # MIPGap
-    h.setOptionValue("time_limit", time_limit)  # TimeLimit
-    # Presolve is on by default; set explicitly if you want:
-    # h.setOptionValue("presolve", "on")
+    h.setOptionValue("mip_rel_gap", mip_gap)    # MIPGap
 
-    optimization_start = time.perf_counter()
-    if is_maintenance_instance:
-        print("▶ Finding a fleet assignment to seed the maintenance solve...")
-        _seed_maintenance_solve(h, x, instance, data, min(10.0, time_limit / 5))
-        remaining = max(0.0, time_limit - (time.perf_counter() - optimization_start))
-        h.setOptionValue("time_limit", remaining)
+    assignment, start_cost = fleet_start_for(instance)
+    if assignment:
+        start_status = h.setSolution(
+            len(x), [var.index for var in x.values()],
+            [float(assignment[i] == t) for i, t in x],
+        )
+        if start_status != highspy.HighsStatus.kOk:
+            start_cost = None
 
     print("▶ Optimization...")
-    h.run()
+    deadline = time.perf_counter() + time_limit
+    fleet_bound = None
+    if certify_start and not is_maintenance_instance and start_cost is not None and mip_gap > 0:
+        fleet_bound = _solve_with_start_target(h, flights, costs, start_cost, deadline, mip_gap)
+    else:
+        h.setOptionValue("time_limit", time_limit)
+        h.run()
 
     # ---- stats -----------------------------------------------------------
     # HiGHS exposes model dimensions via the LP object
@@ -83,8 +88,10 @@ def solve_instance(filepath, time_limit=600.0):
         obj_value = info.objective_function_value
         gap = info.mip_gap
         dual_bound = info.mip_dual_bound
+        if fleet_bound is not None:
+            gap = min(gap, _relative_gap(obj_value, max(dual_bound, fleet_bound)))
 
-        remaining = time_limit - (time.perf_counter() - optimization_start)
+        remaining = deadline - time.perf_counter()
         if is_maintenance_instance and remaining > 0:
             print("▶ Minimizing maintenance visits with flight assignments fixed...")
             refined_cost = minimize_maintenance_visits(h, x, y, Days, remaining)
@@ -93,11 +100,7 @@ def solve_instance(filepath, time_limit=600.0):
                 print(f"  → {secondary_status} | maintenance visits={h.getObjectiveValue():.0f}")
                 if refined_cost < obj_value:
                     obj_value = refined_cost
-                    difference = max(0.0, obj_value - dual_bound)
-                    if difference == 0.0:
-                        gap = 0.0
-                    else:
-                        gap = difference / abs(obj_value) if obj_value else math.inf
+                    gap = _relative_gap(obj_value, dual_bound)
 
     solve_time = time.perf_counter() - start_time
 
@@ -123,17 +126,37 @@ def solve_instance(filepath, time_limit=600.0):
     return results
 
 
-def _seed_maintenance_solve(h, x, instance, data, time_limit):
-    fleet, fleet_x, _, _ = build_and_solve(*instance, data, maintenance=False)
-    fleet.setOptionValue("output_flag", False)
-    fleet.setOptionValue("time_limit", time_limit)
-    fleet.setOptionValue("mip_rel_gap", 0.02)
-    fleet.run()
-    if fleet.getInfo().primal_solution_status == highspy.SolutionStatus.kSolutionStatusFeasible:
-        fleet_values = fleet.getSolution().col_value
-        columns = [x[key].index for key in fleet_x]
-        values = [float(fleet_values[var.index] > 0.5) for var in fleet_x.values()]
-        h.setSolution(len(columns), columns, values)
+def _relative_gap(cost, bound):
+    difference = max(0.0, cost - bound)
+    return difference / abs(cost) if cost else (math.inf if difference else 0.0)
+
+
+def _solve_with_start_target(h, flights, costs, start_cost, deadline, mip_gap):
+    # Every flight must be covered, so summing its cheapest tail cost is a
+    # lower bound even though those choices may not form valid routes.
+    lower_bound = math.fsum(min(costs[f["id"] - 1], default=0.0) for f in flights)
+    start_gap = _relative_gap(start_cost, lower_bound)
+    certified_start = start_gap <= mip_gap
+    if certified_start:
+        print(f"  → Fleet start certificate | lower bound={lower_bound:.2f} | gap≤{start_gap:.2%}")
+        # Let HiGHS check the full assignment before starting presolve.
+        h.setOptionValue("presolve", "off")
+        h.setOptionValue("objective_target", math.nextafter(start_cost, math.inf))
+
+    h.setOptionValue("time_limit", max(0.0, deadline - time.perf_counter()))
+    h.run()
+    if certified_start:
+        info = h.getInfo()
+        accepted = (
+            info.primal_solution_status == highspy.SolutionStatus.kSolutionStatusFeasible
+            and _relative_gap(info.objective_function_value, lower_bound) <= mip_gap
+        )
+        if not accepted and time.perf_counter() < deadline:
+            h.setOptionValue("presolve", "choose")
+            h.setOptionValue("objective_target", -math.inf)
+            h.setOptionValue("time_limit", max(0.0, deadline - time.perf_counter()))
+            h.run()
+    return lower_bound
 
 
 def write_results_csv(results, csv_path):
@@ -159,9 +182,14 @@ def main():
     parser.add_argument("input", type=Path, nargs="?", default=Path("data/d=0.95"))
     parser.add_argument("--output", type=Path, help="override the solver's default results CSV")
     parser.add_argument("--time-limit", type=float, default=600.0, help="solver seconds per instance")
+    parser.add_argument("--mip-gap", type=float, default=0.02, help="relative operating-cost gap (default: 0.02)")
+    parser.add_argument("--certify-start", action="store_true",
+                        help="allow a fleet-only solve to stop using the starting assignment's cost certificate")
     args = parser.parse_args()
     if not math.isfinite(args.time_limit) or args.time_limit <= 0:
         parser.error("--time-limit must be a positive finite number")
+    if not math.isfinite(args.mip_gap) or args.mip_gap < 0:
+        parser.error("--mip-gap must be a nonnegative finite number")
     if args.input.is_dir():
         paths = sorted(path for path in args.input.glob("*.dat") if path.is_file())
     else:
@@ -177,7 +205,8 @@ def main():
     failed = False
     for path in paths:
         try:
-            results = solve_instance(path, args.time_limit)
+            results = solve_instance(path, args.time_limit, args.mip_gap,
+                                     certify_start=args.certify_start)
         except Exception as e:
             failed = True
             print(f"Error for {os.path.basename(path)}: {e}")
