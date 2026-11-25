@@ -51,8 +51,6 @@ def solve_instance(filepath, time_limit=600.0):
     h.setOptionValue("output_flag", True)       # OutputFlag
     h.setOptionValue("mip_rel_gap", 0.02)       # MIPGap
     h.setOptionValue("time_limit", time_limit)  # TimeLimit
-    # Presolve is on by default; set explicitly if you want:
-    # h.setOptionValue("presolve", "on")
 
     optimization_start = time.perf_counter()
     if is_maintenance_instance:

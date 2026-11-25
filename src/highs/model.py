@@ -59,6 +59,8 @@ def _build_fleet_model(nb_flights, flights, costs, aircraft_init, data):
     flight_ids = range(1, nb_flights + 1)
     reachable = tail_reachability(flights, aircraft_init)
     h = highspy.Highs()
+    h.setOptionValue("threads", 10)
+    h.setOptionValue("parallel", "on")
     x = h.addVariables(
         flight_ids,
         aircraft,
