@@ -7,6 +7,7 @@ from pathlib import Path
 from time import perf_counter
 
 from src.formulation import initial_fleet_assignment
+from src.maintenance_start import complete_maintenance_start
 
 CSV_FIELDS = (
     "filename", "nb_flights", "nb_aircrafts", "horizon", "nb_vars",
@@ -37,14 +38,25 @@ def default_results_path(input_path, output_dir):
     return output_dir / filename
 
 
-def fleet_start_for(instance):
+def start_values_for(instance, x, y, z):
     flights, costs, aircraft_init = instance[3], instance[4], instance[6]
     assignment = initial_fleet_assignment(flights, costs, aircraft_init)
-    if assignment:
-        cost = fsum(costs[i - 1][t] for i, t in assignment.items())
-        print(f"Fleet start | flights={len(assignment)} | flight cost={cost:.2f}")
-        return assignment, cost
-    return None, None
+    if not assignment:
+        return [], None
+    visits = None
+    if y:
+        assignment, visits = complete_maintenance_start(instance, assignment)
+    cost = fsum(costs[i - 1][t] for i, t in assignment.items())
+    print(f"Fleet start | flights={len(assignment)} | flight cost={cost:.2f}")
+    values = [(var, int(assignment[i] == t)) for (i, t), var in x.items()]
+    if visits is not None:
+        maintenance_days, maintenance_flights = visits
+        values.extend((var, int(key in maintenance_days)) for key, var in y.items())
+        values.extend((var, int(key in maintenance_flights)) for key, var in z.items())
+        print(f"Maintenance start | visits={len(maintenance_flights)}")
+    elif y:
+        print("Maintenance start | flight hints only")
+    return values, cost
 
 
 def run_batch(solve_instance, default_input, output_dir, description):

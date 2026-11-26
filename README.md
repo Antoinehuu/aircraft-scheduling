@@ -64,8 +64,11 @@ in each route. Equation (12) in the report omits the cost of the final flight
 of each route. [Fleet-assignment report](results/Rapport_project_no_maintenances.pdf)
 
 All four solvers start from the same deterministic chronological aircraft
-assignment when one is available. For maintenance instances, this supplies
-flight assignments and leaves the maintenance decisions to the solver.
+assignment when one is available. For maintenance instances, the shared start
+also schedules visits after the final flight of the day, respecting maintenance
+history, rolling deadlines, and airport capacity. Start preparation tries
+repeatable alternative routes if needed and supplies flight hints alone if it
+cannot complete the visits. The solvers can improve the starting schedule.
 
 For benchmark runs, use the same inputs, `--time-limit`, and `--mip-gap`
 (default 0.02) for each solver. Reported time includes model construction and
@@ -78,27 +81,27 @@ requested gap against a separate cost bound.
 ## Benchmark Results
 
 Each solver cell shows **instances marked `OPTIMAL` / instances run (median solve time for `OPTIMAL` runs)**.
-The **Instances** column counts distinct instances across all four CSVs. Each
-solver contributes its latest run with a recorded runtime per instance. Coverage
-varies by solver, especially at 30 and 40 aircraft. A dash indicates that the
-solver recorded no `OPTIMAL` runs in that group.
+The **Instances** column counts distinct instance filenames across all four
+CSVs. Each solver contributes its last row with a finite runtime per filename.
+Status matching is case-insensitive. A dash stands for a missing count or
+median. The CSVs report elapsed times, and the solver time limit can vary by run.
 
 ### Tail assignement model
 
-| Aircrafts | Instances | Time Limit | [Gurobi](src/gurobi/results.csv) | [HiGHS](src/highs/results.csv) | [OR-Tools](src/or_tools/results.csv) | [Hexaly](src/hexaly/results.csv) |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 10 | 121 | 600 | 121/121 (0.28 s) | 121/121 (0.76 s) | 121/121 (0.42 s) | 121/121 (1.77 s) |
-| 20 | 120 | 600| 120/120 (3.84 s) | 111/120 (27.50 s) | 101/120 (45.07 s) | 115/120 (38.44 s) |
-| 30 | 120 |600| 120/120 (14.47 s) | 20/82 (158.73 s) | 8/56 (236.79 s) | 11/89 (91.07 s) |
-| 40 | 120 | 600 | 120/120 (147.67 s) | 3/51 (428.39 s) | 0/14 (—) | 1/40 (469.71 s) |
+| Aircraft | Instances | [Gurobi](src/gurobi/results.csv) | [HiGHS](src/highs/results.csv) | [OR-Tools](src/or_tools/results.csv) | [Hexaly](src/hexaly/results.csv) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 10 | 121 | 121/121 (0.28 s) | 121/121 (0.81 s) | 121/121 (0.42 s) | 121/121 (2.92 s) |
+| 20 | 120 | 120/120 (3.84 s) | 120/120 (16.78 s) | 101/120 (45.07 s) | 120/120 (28.79 s) |
+| 30 | 120 | 120/120 (14.47 s) | 88/88 (173.16 s) | 8/56 (236.79 s) | 83/83 (179.03 s) |
+| 40 | 120 | 120/120 (147.67 s) | 72/80 (563.62 s) | 0/14 (—) | 76/80 (616.31 s) |
 
 ### Tail assignement with mainteances
 
-| Aircraft | Instances | Time Limit | [Gurobi](src/gurobi/results_maintenance.csv) | [HiGHS](src/highs/results_maintenance.csv) | [OR-Tools](src/or_tools/results_maintenance.csv) | [Hexaly](src/hexaly/results_maintenance.csv) |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 10 | 15 | 600 | 15/15 (2.67 s) | 15/15 (8.54 s) | 15/15 (4.36 s) | 15/15 (13.90 s) |
-| 20 | 15 | 600 | 15/15 (14.84 s) | 1/4 (588.61 s) | 3/15 (293.93 s) | 0/15 (—) |
-| 30 | 10 | 600 | 4/10 (281.17 s) | — | 0/10 (—) | 0/10 (—) |
+| Aircraft | Instances | [Gurobi](src/gurobi/results_maintenance.csv) | [HiGHS](src/highs/results_maintenance.csv) | [OR-Tools](src/or_tools/results_maintenance.csv) | [Hexaly](src/hexaly/results_maintenance.csv) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 10 | 15 | 15/15 (2.67 s) | 15/15 (4.94 s) | 15/15 (1.48 s) | 15/15 (13.90 s) |
+| 20 | 15 | 15/15 (14.84 s) | 5/5 (65.59 s) | 12/15 (34.49 s) | 0/15 (—) |
+| 30 | 10 | 4/10 (281.17 s) | — | 7/10 (121.30 s) | 0/10 (—) |
 
 ### Plot solver results
 
