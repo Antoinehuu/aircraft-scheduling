@@ -9,7 +9,7 @@ from hexaly.optimizer import HxSolutionStatus
 from src import load_dat_file, preprocess_flights
 from src.hexaly import build_and_solve
 from src.hexaly.model import prepare_maintenance_refinement
-from src.solver_cli import fleet_start_for, results_for, run_batch
+from src.solver_cli import results_for, run_batch, start_values_for
 
 
 _FEASIBLE = (HxSolutionStatus.FEASIBLE, HxSolutionStatus.OPTIMAL)
@@ -21,18 +21,18 @@ def solve_instance(filepath, time_limit=600, mip_gap=0.02):
     data = preprocess_flights(instance[3], instance[7], instance[6])
     maintenance = "maintenance" in filepath
     start = perf_counter()
-    optimizer, x, y, _ = build_and_solve(*instance, data, maintenance)
+    optimizer, x, y, z = build_and_solve(*instance, data, maintenance)
     with optimizer:
         model = optimizer.model
         model.close()
         optimizer.param.verbosity = 0
         optimizer.param.set_gap_limit(mip_gap)
-        assignment, _ = fleet_start_for(instance)
-        if assignment:
+        values, _ = start_values_for(instance, x, y, z)
+        if values:
             solution = optimizer.solution
-            for (i, t), var in x.items():
+            for var, value in values:
                 if var.is_decision():
-                    solution.set_value(var, int(assignment[i] == t))
+                    solution.set_value(var, value)
         solver_seconds = max(1, int(time_limit))
         deadline = perf_counter() + solver_seconds
         optimizer.param.time_limit = solver_seconds

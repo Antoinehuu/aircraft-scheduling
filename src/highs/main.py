@@ -15,7 +15,7 @@ import highspy
 from src import load_dat_file, preprocess_flights
 from src.highs import build_and_solve
 from src.highs.model import minimize_maintenance_visits
-from src.solver_cli import default_results_path, fleet_start_for
+from src.solver_cli import default_results_path, start_values_for
 
 
 def solve_instance(filepath, time_limit=600.0, mip_gap=0.02, *, certify_start=False):
@@ -44,18 +44,18 @@ def solve_instance(filepath, time_limit=600.0, mip_gap=0.02, *, certify_start=Fa
 
     is_maintenance_instance = "maintenance" in filepath
 
-    h, x, y, _ = build_and_solve(*instance, data, maintenance=is_maintenance_instance)
+    h, x, y, z = build_and_solve(*instance, data, maintenance=is_maintenance_instance)
 
     # Solver options (mirror the Gurobi block)
     # HiGHS uses setOptionValue, not setParam
     h.setOptionValue("output_flag", True)       # OutputFlag
     h.setOptionValue("mip_rel_gap", mip_gap)    # MIPGap
 
-    assignment, start_cost = fleet_start_for(instance)
-    if assignment:
+    values, start_cost = start_values_for(instance, x, y, z)
+    if values:
         start_status = h.setSolution(
-            len(x), [var.index for var in x.values()],
-            [float(assignment[i] == t) for i, t in x],
+            len(values), [var.index for var, _ in values],
+            [float(value) for _, value in values],
         )
         if start_status != highspy.HighsStatus.kOk:
             start_cost = None

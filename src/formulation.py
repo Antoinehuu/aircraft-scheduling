@@ -7,11 +7,12 @@ from math import inf
 from random import Random
 
 
-def initial_fleet_assignment(flights, costs, aircraft_init):
+def initial_fleet_assignment(flights, costs, aircraft_init, *, seed=None):
     """Return a deterministic starting tail for each flight in a feasible fleet schedule."""
-    ready = {tail: (airport, -inf) for tail, airport in aircraft_init.items()}
+    ready = {tail: (aircraft_init[tail], -inf) for tail in sorted(aircraft_init)}
     assigned = {}
     used = set()
+    rng = Random(seed) if seed is not None else None
     for flight in sorted(flights, key=lambda f: (f["departure"], f["id"])):
         i = flight["id"]
         available = (
@@ -19,7 +20,9 @@ def initial_fleet_assignment(flights, costs, aircraft_init):
             if airport == flight["origin"] and time <= flight["departure"]
         )
         # Every tail must fly, so prefer one that has not left its base yet.
-        tail = min(available, key=lambda t: (t in used, costs[i - 1][t], t), default=None)
+        tail = min(available,
+                   key=lambda t: (t in used, rng.random() if rng is not None else costs[i - 1][t], t),
+                   default=None)
         if tail is None:
             return None
         assigned[i] = tail

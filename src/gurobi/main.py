@@ -9,7 +9,7 @@ import gurobipy
 from src import load_dat_file, preprocess_flights
 from src.gurobi import build_and_solve
 from src.gurobi.model import prepare_maintenance_refinement
-from src.solver_cli import fleet_start_for, results_for, run_batch
+from src.solver_cli import results_for, run_batch, start_values_for
 
 
 def solve_instance(filepath, time_limit=600, mip_gap=0.02):
@@ -18,15 +18,14 @@ def solve_instance(filepath, time_limit=600, mip_gap=0.02):
     data = preprocess_flights(instance[3], instance[7], instance[6])
     maintenance = "maintenance" in filepath
     start = perf_counter()
-    model, x, y, _ = build_and_solve(*instance, data, maintenance)
+    model, x, y, z = build_and_solve(*instance, data, maintenance)
     with model:
         model.Params.OutputFlag = 0
         model.Params.Presolve = 1
         model.Params.MIPGap = mip_gap
-        assignment, _ = fleet_start_for(instance)
-        if assignment:
-            for (i, t), var in x.items():
-                var.Start = int(assignment[i] == t)
+        values, _ = start_values_for(instance, x, y, z)
+        for var, value in values:
+            var.Start = value
         deadline = perf_counter() + time_limit
         model.Params.TimeLimit = time_limit
         model.optimize()
