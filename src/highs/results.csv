@@ -797,3 +797,65 @@ DataCplex_density=1_p=30_h=21_test_4.dat,1166,30,0,34980,20351,1934298,394.37,,9
 DataCplex_density=1_p=30_h=21_test_5.dat,1190,30,0,35700,20879,1992136,287.54,,9829538.0,0.0013,Optimal
 DataCplex_density=1_p=30_h=21_test_6.dat,1180,30,0,35400,20298,1887172,319.58,,9750754.0,0.0015,Optimal
 DataCplex_density=1_p=30_h=21_test_7.dat,1173,30,0,35190,19533,1829875,326.05,,9695576.0,0.0016,Optimal
+DataCplex_density=1_p=30_h=21_test_8.dat,1196,30,0,35880,20972,2009782,451.24,,9894161.0,0.0014,Optimal
+DataCplex_density=1_p=30_h=21_test_9.dat,1175,30,0,35250,21001,2000737,422.54,,9699605.0,0.0013,Optimal
+DataCplex_density=1_p=30_h=30_test_0.dat,1262,30,0,37860,22877,2349535,348.3,,10434209.0,0.0019,Optimal
+DataCplex_density=1_p=30_h=30_test_1.dat,1254,30,0,37620,21970,2322639,431.29,,10365055.0,0.0015,Optimal
+DataCplex_density=1_p=30_h=30_test_2.dat,1264,30,0,37920,21790,2183122,495.69,,10448191.0,0.0015,Optimal
+DataCplex_density=1_p=30_h=30_test_3.dat,1245,30,0,37350,22435,2317043,371.72,,10277104.0,0.0014,Optimal
+DataCplex_density=1_p=30_h=30_test_4.dat,1235,30,0,37050,22030,2251800,465.78,,10204768.0,0.0014,Optimal
+DataCplex_density=1_p=30_h=30_test_5.dat,1214,30,0,36420,22557,2273612,346.75,,10035650.0,0.0013,Optimal
+DataCplex_density=1_p=30_h=30_test_6.dat,1253,30,0,37590,22299,2251429,371.14,,10356231.0,0.0017,Optimal
+DataCplex_density=1_p=30_h=30_test_7.dat,1256,30,0,37680,22428,2257727,365.73,,10379461.0,0.0014,Optimal
+DataCplex_density=1_p=30_h=30_test_8.dat,1261,30,0,37830,22488,2256586,451.94,,10421442.0,0.0017,Optimal
+DataCplex_density=1_p=30_h=30_test_9.dat,1267,30,0,38010,22789,2385516,377.42,,10488741.0,0.0014,Optimal
+DataCplex_density=1_p=30_h=7_test_0.dat,614,30,0,18420,8958,488909,42.2,,5032457.0,0.0018,Optimal
+DataCplex_density=1_p=30_h=7_test_1.dat,624,30,0,18720,8984,473645,45.15,,5130837.0,0.0016,Optimal
+DataCplex_density=1_p=30_h=7_test_2.dat,627,30,0,18810,8768,470737,38.38,,5147598.0,0.0,Optimal
+DataCplex_density=1_p=30_h=7_test_3.dat,625,30,0,18750,8534,460747,42.44,,5138397.0,0.0018,Optimal
+DataCplex_density=1_p=30_h=7_test_4.dat,629,30,0,18870,8796,466008,44.58,,5166198.0,0.0018,Optimal
+DataCplex_density=1_p=30_h=7_test_5.dat,604,30,0,18120,8797,454440,40.59,,4950701.0,0.002,Optimal
+DataCplex_density=1_p=30_h=7_test_6.dat,623,30,0,18690,8820,471293,32.65,,5126031.0,0.0017,Optimal
+DataCplex_density=1_p=30_h=7_test_7.dat,631,30,0,18930,8977,469262,46.55,,5180034.0,0.0017,Optimal
+DataCplex_density=1_p=30_h=7_test_8.dat,626,30,0,18780,8936,480190,40.77,,5140423.0,0.0,Optimal
+DataCplex_density=1_p=30_h=7_test_9.dat,629,30,0,18870,8889,478049,44.68,,5166408.0,0.002,Optimal
+DataCplex_density=1_p=40_h=15_test_0.dat,1226,40,0,49040,26418,2563290,896.44,,10155858.0,0.0014,Optimal
+DataCplex_density=1_p=40_h=15_test_1.dat,1236,40,0,49440,25966,2584564,1201.14,,10219740.0,0.9976,Time limit reached
+DataCplex_density=1_p=40_h=15_test_2.dat,1239,40,0,49560,26135,2661327,640.0,,10236035.0,0.0015,Optimal
+DataCplex_density=1_p=40_h=15_test_3.dat,1206,40,0,48240,26331,2543147,602.14,,9974389.0,0.0016,Optimal
+DataCplex_density=1_p=40_h=15_test_4.dat,1224,40,0,48960,25447,2578644,922.83,,10127100.0,0.0016,Optimal
+DataCplex_density=1_p=40_h=15_test_5.dat,1215,40,0,48600,25581,2636881,646.22,,10049223.0,0.0016,Optimal
+DataCplex_density=1_p=40_h=15_test_6.dat,1210,40,0,48400,25839,2512949,558.54,,10000285.0,0.0015,Optimal
+DataCplex_density=1_p=40_h=15_test_7.dat,1225,40,0,49000,26363,2687526,664.1,,10150735.0,0.0017,Optimal
+DataCplex_density=1_p=40_h=15_test_8.dat,1233,40,0,49320,26884,2722299,625.88,,10199234.0,0.0017,Optimal
+DataCplex_density=1_p=40_h=15_test_9.dat,1239,40,0,49560,25828,2545759,1134.89,,10237308.0,0.0015,Optimal
+DataCplex_density=1_p=40_h=21_test_0.dat,1288,40,0,51520,28835,3138489,1201.63,,10612377.0,0.9976,Time limit reached
+DataCplex_density=1_p=40_h=21_test_1.dat,1294,40,0,51760,27759,3021505,708.53,,10672473.0,0.0014,Optimal
+DataCplex_density=1_p=40_h=21_test_2.dat,1344,40,0,53760,29353,3407960,991.26,,11080859.0,0.0013,Optimal
+DataCplex_density=1_p=40_h=21_test_3.dat,1321,40,0,52840,29303,3244383,776.32,,10893120.0,0.0014,Optimal
+DataCplex_density=1_p=40_h=21_test_4.dat,1281,40,0,51240,28327,3076015,911.22,,10566999.0,0.0015,Optimal
+DataCplex_density=1_p=40_h=21_test_5.dat,1295,40,0,51800,28650,3100356,905.59,,10675927.0,0.0015,Optimal
+DataCplex_density=1_p=40_h=21_test_6.dat,1324,40,0,52960,29428,3324226,921.25,,10915436.0,0.0014,Optimal
+DataCplex_density=1_p=40_h=21_test_7.dat,1313,40,0,52520,29697,3270687,793.0,,10844712.0,0.0014,Optimal
+DataCplex_density=1_p=40_h=21_test_8.dat,1309,40,0,52360,29764,3288882,907.54,,10789447.0,0.0012,Optimal
+DataCplex_density=1_p=40_h=21_test_9.dat,1295,40,0,51800,28915,3107394,606.74,,10676573.0,0.0016,Optimal
+DataCplex_density=1_p=40_h=30_test_0.dat,1490,40,0,59600,34232,4511899,1202.26,,12216163.0,0.9993,Time limit reached
+DataCplex_density=1_p=40_h=30_test_1.dat,1508,40,0,60320,34016,4503877,1202.18,,12365343.0,0.9981,Time limit reached
+DataCplex_density=1_p=40_h=30_test_2.dat,1486,40,0,59440,33077,4247939,1173.08,,12195548.0,0.0015,Optimal
+DataCplex_density=1_p=40_h=30_test_3.dat,1442,40,0,57680,32958,4210031,992.47,,11880463.0,0.0015,Optimal
+DataCplex_density=1_p=40_h=30_test_4.dat,1493,40,0,59720,34359,4620884,1202.26,,12238765.0,1.0,Time limit reached
+DataCplex_density=1_p=40_h=30_test_5.dat,1471,40,0,58840,33287,4200661,945.89,,12102749.0,0.0017,Optimal
+DataCplex_density=1_p=40_h=30_test_6.dat,1475,40,0,59000,33247,4376481,1202.14,,12118668.0,0.998,Time limit reached
+DataCplex_density=1_p=40_h=30_test_7.dat,1554,40,0,62160,35225,4660653,1202.23,,12754060.0,0.9983,Time limit reached
+DataCplex_density=1_p=40_h=30_test_8.dat,1533,40,0,61320,35154,4840373,1202.3,,12561474.0,0.9995,Time limit reached
+DataCplex_density=1_p=40_h=30_test_9.dat,1489,40,0,59560,33061,4338439,1201.96,,12215752.0,0.9986,Time limit reached
+DataCplex_density=1_p=40_h=7_test_0.dat,790,40,0,31600,13924,915208,138.39,,6502497.0,0.0021,Optimal
+DataCplex_density=1_p=40_h=7_test_1.dat,794,40,0,31760,13928,901751,128.02,,6527310.0,0.0018,Optimal
+DataCplex_density=1_p=40_h=7_test_2.dat,790,40,0,31600,14395,903573,146.13,,6501205.0,0.0019,Optimal
+DataCplex_density=1_p=40_h=7_test_3.dat,782,40,0,31280,13697,921762,134.79,,6431893.0,0.002,Optimal
+DataCplex_density=1_p=40_h=7_test_4.dat,788,40,0,31520,13559,895105,124.87,,6472199.0,0.0019,Optimal
+DataCplex_density=1_p=40_h=7_test_5.dat,784,40,0,31360,13833,846401,130.23,,6441796.0,0.002,Optimal
+DataCplex_density=1_p=40_h=7_test_6.dat,783,40,0,31320,14129,955085,147.67,,6436810.0,0.002,Optimal
+DataCplex_density=1_p=40_h=7_test_7.dat,778,40,0,31120,13990,907995,124.83,,6402244.0,0.0021,Optimal
+DataCplex_density=1_p=40_h=7_test_8.dat,776,40,0,31040,13239,854974,117.76,,6390469.0,0.0022,Optimal
+DataCplex_density=1_p=40_h=7_test_9.dat,793,40,0,31720,14408,971814,143.68,,6517635.0,0.002,Optimal
